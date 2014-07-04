@@ -494,7 +494,6 @@ class HDF5DataBackend(AbstractDataBackend):
          global_offset_x, global_offset_y,
          index_slice, data_slice,
          transpose, input_params) = parameters
-        print ('**INDEX_SLICE', index_slice)
         x_resolution = plot_state['screen_x'].end - plot_state['screen_x'].start
         y_resolution = plot_state['screen_y'].end - plot_state['screen_y'].start
 

@@ -27,7 +27,6 @@ def downsample(arr, global_x_range, global_y_range,
                x_bounds, y_bounds, x_resolution, y_resolution,
                index_slice, transpose):
     shape = arr.shape
-    print ("**", index_slice, transpose)
     # assume the array is 3d.  If that is the case, we might set
     # index_slice to [None, None, 0].  Then, the slice we pull out will be
     # [x_start:x_end, y_start:y_end, 0].  The goal of the following code
@@ -53,22 +52,28 @@ def downsample(arr, global_x_range, global_y_range,
 
     image_x_axis = np.linspace(global_x_range[0],
                                global_x_range[1],
-                               image_shapes[0])
+                               image_shapes[1])
     image_y_axis = np.linspace(global_y_range[0],
                                global_y_range[1],
-                               image_shapes[1])
+                               image_shapes[0])
+
     x_resolution, y_resolution = int(round(x_resolution)), int(round(y_resolution))
     x_bounds = [x_bounds.start, x_bounds.end]
     y_bounds = [y_bounds.start, y_bounds.end]
+    if index_slice[0] is None and index_slice[1] is None:
+        print ("x_bounds", x_bounds, "y_bounds", y_bounds)
     x_bounds = np.searchsorted(image_x_axis, x_bounds)
     y_bounds = np.searchsorted(image_y_axis, y_bounds)
+    if index_slice[0] is None and index_slice[1] is None:
+        print ("x_bounds", x_bounds, image_x_axis, "y_bounds", y_bounds, image_y_axis)
     x_downsample_factor = max(round((x_bounds[1] - x_bounds[0]) / x_resolution / 3.), 1)
     y_downsample_factor = max(round((y_bounds[1] - y_bounds[0]) / y_resolution / 3.), 1)
 
     # swap out the Nones with actual slice objects
-    index_slice[image_indexes[0]] = slice(x_bounds[0], x_bounds[1], x_downsample_factor)
-    index_slice[image_indexes[1]] = slice(y_bounds[0], y_bounds[1], y_downsample_factor)
-
+    index_slice[image_indexes[1]] = slice(x_bounds[0], x_bounds[1], x_downsample_factor)
+    index_slice[image_indexes[0]] = slice(y_bounds[0], y_bounds[1], y_downsample_factor)
+    if index_slice[-1] == 0:
+        print ("SLICE", index_slice, arr.shape)
     subset = arr[tuple(index_slice)]
     if transpose:
         subset = subset.T

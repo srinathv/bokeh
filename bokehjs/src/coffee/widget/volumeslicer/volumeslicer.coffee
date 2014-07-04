@@ -95,9 +95,9 @@ define [
       @$(".horiz_plot").append(@horiz_plot_view.$el)
       @z_slice_max = @mget('shape')[2]
       @z_slice_min = 0
-      @y_slice_max = @mget('shape')[0]
+      @y_slice_max = @mget('shape')[1]
       @y_slice_min = 0
-      @x_slice_max = @mget('shape')[1]
+      @x_slice_max = @mget('shape')[0]
       @x_slice_min = 0
       @$el.find(".app_slider").slider(
         orientation: "vertical",
