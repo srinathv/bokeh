@@ -2,8 +2,13 @@ define [
   "common/has_parent",
   "common/continuum_view",
   "./volumeslicertemplate",
+  "jquery_ui/core",
+  "jquery_ui/widget",
+  "jquery_ui/mouse",
+  "jquery_mousewheel",
   "jquery_ui/slider",
-], (HasParent, ContinuumView, template, slider) ->
+
+], (HasParent, ContinuumView, template, core, widget, mouse, mousewheel, slider) ->
 
   class VolumeSlicerView extends ContinuumView.View
     template : template
