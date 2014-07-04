@@ -83,7 +83,6 @@
     Bokeh.LinearAxis = require("renderer/guide/linear_axis");
     Bokeh.BoxSelection = require("renderer/overlay/box_selection");
     Bokeh.Properties = require("renderer/properties");
-    Bokeh.embed_core = require("server/embed_core");
     Bokeh.embed = require("server/embed");
     Bokeh.serverrun = require("server/serverrun");
     Bokeh.serverutils = require("server/serverutils");

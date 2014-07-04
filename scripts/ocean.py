@@ -5,7 +5,7 @@ from bokeh.server.utils.plugins import object_page
 @bokeh_app.route("/bokeh/ocean/")
 @object_page("ocean")
 def make_object():
-    slicer = VolumeSlicer.create("/defaultuser/big4.table/big",
+    slicer = VolumeSlicer.create("/defaultuser/oceantemperature/big4.table/big",
                                  [4096, 8192, 94],
                                  x_bounds=[-180,180],
                                  y_bounds=[-90,90],

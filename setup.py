@@ -245,7 +245,7 @@ suffix_list = ('.csv', '.conf', '.gz', '.json')
 
 package_data_dirs = package_data_dirs + get_sample_data()
 
-scripts = ['bokeh-server']
+scripts = ['bokeh-server', "websocket_worker.py"]
 
 if '--user' in sys.argv:
     site_packages = site.USER_SITE
@@ -348,6 +348,8 @@ setup(
     cmdclass=_cmdclass,
     packages=[
         'bokeh',
+        'bokeh.volumeslicer',
+        'bokeh.crossfilter',        
         'bokeh.sampledata',
         'bokeh.server',
         'bokeh.server.models',
