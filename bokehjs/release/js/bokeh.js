@@ -12434,7 +12434,7 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
       CloseWrapper.prototype.render = function() {
         this.view.$el.detach();
         this.$el.empty();
-        this.$el.html("<div class='bk-close'>X</div>");
+        this.$el.html("<a href='#' class='bk-close'>[x]</a>");
         return this.$el.append(this.view.$el);
       };
 
@@ -14933,6 +14933,206 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
   var __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
+  define('mapper/1d/log_mapper',["backbone", "common/has_properties"], function(Backbone, HasProperties) {
+    var LogMapper, LogMappers, _ref, _ref1;
+    LogMapper = (function(_super) {
+      __extends(LogMapper, _super);
+
+      function LogMapper() {
+        _ref = LogMapper.__super__.constructor.apply(this, arguments);
+        return _ref;
+      }
+
+      LogMapper.prototype.initialize = function(attrs, options) {
+        LogMapper.__super__.initialize.call(this, attrs, options);
+        this.register_property('mapper_state', this._mapper_state, true);
+        this.add_dependencies('mapper_state', this, ['source_range', 'target_range']);
+        this.add_dependencies('mapper_state', this.get('source_range'), ['start', 'end']);
+        return this.add_dependencies('mapper_state', this.get('target_range'), ['start', 'end']);
+      };
+
+      LogMapper.prototype.map_to_target = function(x) {
+        var error, inter_offset, inter_scale, intermediate, offset, result, scale, _ref1;
+        _ref1 = this.get('mapper_state'), scale = _ref1[0], offset = _ref1[1], inter_scale = _ref1[2], inter_offset = _ref1[3];
+        intermediate = 0;
+        result = 0;
+        if (inter_scale === 0) {
+          intermediate = 0;
+        } else {
+          try {
+            intermediate = (Math.log(x) - inter_offset) / inter_scale;
+            if (isNaN(intermediate)) {
+              throw "NaN";
+            }
+            if (isFinite(intermediate) === false) {
+              throw "Infinite";
+            }
+          } catch (_error) {
+            error = _error;
+            intermediate = 0;
+          }
+        }
+        result = intermediate * scale + offset;
+        return result;
+      };
+
+      LogMapper.prototype.v_map_to_target = function(xs) {
+        var error, i, idx, inter_offset, inter_scale, intermediate, mask, mask1, mask2, offset, result, scale, x, _i, _j, _len, _len1, _ref1;
+        _ref1 = this.get('mapper_state'), scale = _ref1[0], offset = _ref1[1], inter_scale = _ref1[2], inter_offset = _ref1[3];
+        intermediate = new Float64Array(xs.length);
+        result = new Float64Array(xs.length);
+        if (inter_scale === 0) {
+          intermediate = xs.map(function(i) {
+            return i * 0;
+          });
+        } else {
+          try {
+            mask1 = xs.map(function(i) {
+              return i <= 0;
+            });
+            mask2 = xs.map(function(i) {
+              return isNaN(i);
+            });
+            mask = (function() {
+              var _i, _ref2, _results;
+              _results = [];
+              for (i = _i = 0, _ref2 = xs.length; 0 <= _ref2 ? _i < _ref2 : _i > _ref2; i = 0 <= _ref2 ? ++_i : --_i) {
+                _results.push(mask1[i] | mask2[i]);
+              }
+              return _results;
+            })();
+            mask = mask.reduce(function(x, y) {
+              return x || y;
+            });
+            if (mask === 1) {
+              xs[mask] = 1;
+            }
+            intermediate = xs.map(function(i) {
+              return (Math.log(i) - inter_offset) / inter_scale;
+            });
+            for (idx = _i = 0, _len = intermediate.length; _i < _len; idx = ++_i) {
+              x = intermediate[idx];
+              if (isNaN(intermediate[idx])) {
+                throw "NaN";
+              }
+              if (isFinite(intermediate[idx]) === false) {
+                throw "Infinite";
+              }
+            }
+          } catch (_error) {
+            error = _error;
+            intermediate = xs.map(function(i) {
+              return i * 0;
+            });
+          }
+        }
+        for (idx = _j = 0, _len1 = xs.length; _j < _len1; idx = ++_j) {
+          x = xs[idx];
+          result[idx] = intermediate[idx] * scale + offset;
+        }
+        return result;
+      };
+
+      LogMapper.prototype.map_from_target = function(xprime) {
+        var inter_offset, inter_scale, intermediate, offset, scale, _ref1;
+        _ref1 = this.get('mapper_state'), scale = _ref1[0], offset = _ref1[1], inter_scale = _ref1[2], inter_offset = _ref1[3];
+        intermediate = (xprime - offset) / scale;
+        intermediate = Math.exp(inter_scale * intermediate + inter_offset);
+        return intermediate;
+      };
+
+      LogMapper.prototype.v_map_from_target = function(xprimes) {
+        var inter_offset, inter_scale, intermediate, offset, scale, _ref1;
+        _ref1 = this.get('mapper_state'), scale = _ref1[0], offset = _ref1[1], inter_scale = _ref1[2], inter_offset = _ref1[3];
+        intermediate = xprimes.map(function(i) {
+          return (i - offset) / scale;
+        });
+        intermediate = intermediate.map(function(i) {
+          return Math.exp(inter_scale * i + inter_offset);
+        });
+        return intermediate;
+      };
+
+      LogMapper.prototype._get_safe_scale = function(orig_start, orig_end) {
+        var end, log_val, start;
+        if (orig_start < 0) {
+          start = 0;
+        } else {
+          start = orig_start;
+        }
+        if (orig_end < 0) {
+          end = 0;
+        } else {
+          end = orig_end;
+        }
+        if (start === end) {
+          if (start === 0) {
+            start = 1;
+            end = 10;
+          } else {
+            log_val = Math.log(start) / Math.log(10);
+            start = Math.pow(10, Math.floor(log_val));
+            if (Math.ceil(log_val) !== Math.floor(log_val)) {
+              end = Math.pow(10, Math.ceil(log_val));
+            } else {
+              end = Math.pow(10, Math.ceil(log_val) + 1);
+            }
+          }
+        }
+        return [start, end];
+      };
+
+      LogMapper.prototype._mapper_state = function() {
+        var end, inter_offset, inter_scale, offset, scale, screen_range, source_end, source_start, start, target_end, target_start, _ref1;
+        source_start = this.get('source_range').get('start');
+        source_end = this.get('source_range').get('end');
+        target_start = this.get('target_range').get('start');
+        target_end = this.get('target_range').get('end');
+        screen_range = target_end - target_start;
+        _ref1 = this._get_safe_scale(source_start, source_end), start = _ref1[0], end = _ref1[1];
+        if (start === 0) {
+          inter_scale = Math.log(end);
+          inter_offset = 0;
+        } else {
+          inter_scale = Math.log(end) - Math.log(start);
+          inter_offset = Math.log(start);
+        }
+        scale = screen_range;
+        offset = target_start;
+        return [scale, offset, inter_scale, inter_offset];
+      };
+
+      return LogMapper;
+
+    })(HasProperties);
+    LogMappers = (function(_super) {
+      __extends(LogMappers, _super);
+
+      function LogMappers() {
+        _ref1 = LogMappers.__super__.constructor.apply(this, arguments);
+        return _ref1;
+      }
+
+      LogMappers.prototype.model = LogMapper;
+
+      return LogMappers;
+
+    })(Backbone.Collection);
+    return {
+      "Model": LogMapper,
+      "Collection": new LogMappers()
+    };
+  });
+
+}).call(this);
+
+/*
+//@ sourceMappingURL=log_mapper.js.map
+*/;
+(function() {
+  var __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
   define('mapper/1d/categorical_mapper',["backbone", "./linear_mapper"], function(Backbone, LinearMapper) {
     var CategoricalMapper, CategoricalMappers, _ref, _ref1;
     CategoricalMapper = (function(_super) {
@@ -15026,7 +15226,7 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-  define('common/plot',["underscore", "backbone", "require", "./build_views", "./safebind", "./bulk_save", "./continuum_view", "./has_parent", "./view_state", "mapper/1d/linear_mapper", "mapper/1d/categorical_mapper", "mapper/2d/grid_mapper", "renderer/properties", "tool/active_tool_manager"], function(_, Backbone, require, build_views, safebind, bulk_save, ContinuumView, HasParent, ViewState, LinearMapper, CategoricalMapper, GridMapper, Properties, ActiveToolManager) {
+  define('common/plot',["underscore", "backbone", "require", "./build_views", "./safebind", "./bulk_save", "./continuum_view", "./has_parent", "./view_state", "mapper/1d/linear_mapper", "mapper/1d/log_mapper", "mapper/1d/categorical_mapper", "mapper/2d/grid_mapper", "renderer/properties", "tool/active_tool_manager"], function(_, Backbone, require, build_views, safebind, bulk_save, ContinuumView, HasParent, ViewState, LinearMapper, LogMapper, CategoricalMapper, GridMapper, Properties, ActiveToolManager) {
     var LEVELS, Plot, PlotView, Plots, delay_animation, line_properties, text_properties, throttle_animation, _ref, _ref1, _ref2;
     line_properties = Properties.line_properties;
     text_properties = Properties.text_properties;
@@ -15139,7 +15339,7 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
       };
 
       PlotView.prototype.initialize = function(options) {
-        var level, xmapper_type, ymapper_type, _i, _len, _ref1, _ref10, _ref11, _ref12, _ref13, _ref14, _ref15, _ref16, _ref17, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9;
+        var level, xmapper_type, xmt, ymapper_type, ymt, _i, _len, _ref1, _ref10, _ref11, _ref12, _ref13, _ref14, _ref15, _ref16, _ref17, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9;
         PlotView.__super__.initialize.call(this, _.defaults(options, this.default_options));
         this.throttled_render = throttle_animation(this.render, 15);
         this.throttled_render_canvas = throttle_animation(this.render_canvas, 15);
@@ -15164,22 +15364,44 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
         this.hidpi = (_ref15 = options.hidpi) != null ? _ref15 : this.mget('hidpi');
         this.x_range = (_ref16 = options.x_range) != null ? _ref16 : this.mget_obj('x_range');
         this.y_range = (_ref17 = options.y_range) != null ? _ref17 : this.mget_obj('y_range');
-        xmapper_type = LinearMapper.Model;
-        if (this.x_range.type === "FactorRange") {
-          xmapper_type = CategoricalMapper.Model;
+        xmt = this.mget('x_mapper_type');
+        if (xmt === 'auto') {
+          xmapper_type = LinearMapper.Model;
+          if (this.x_range.type === "FactorRange") {
+            xmapper_type = CategoricalMapper.Model;
+          }
+          this.xmapper = new xmapper_type({
+            source_range: this.x_range,
+            target_range: this.view_state.get('inner_range_horizontal')
+          });
+        } else {
+          if (xmt === 'log') {
+            xmapper_type = LogMapper.Model;
+          }
+          this.xmapper = new xmapper_type({
+            source_range: this.x_range,
+            target_range: this.view_state.get('inner_range_horizontal')
+          });
         }
-        this.xmapper = new xmapper_type({
-          source_range: this.x_range,
-          target_range: this.view_state.get('inner_range_horizontal')
-        });
-        ymapper_type = LinearMapper.Model;
-        if (this.y_range.type === "FactorRange") {
-          ymapper_type = CategoricalMapper.Model;
+        ymt = this.mget('y_mapper_type');
+        if (ymt === 'auto') {
+          ymapper_type = LinearMapper.Model;
+          if (this.y_range.type === "FactorRange") {
+            ymapper_type = CategoricalMapper.Model;
+          }
+          this.ymapper = new ymapper_type({
+            source_range: this.y_range,
+            target_range: this.view_state.get('inner_range_vertical')
+          });
+        } else {
+          if (ymt === 'log') {
+            ymapper_type = LogMapper.Model;
+          }
+          this.ymapper = new ymapper_type({
+            source_range: this.y_range,
+            target_range: this.view_state.get('inner_range_vertical')
+          });
         }
-        this.ymapper = new ymapper_type({
-          source_range: this.y_range,
-          target_range: this.view_state.get('inner_range_vertical')
-        });
         this.mapper = new GridMapper.Model({
           domain_mapper: this.xmapper,
           codomain_mapper: this.ymapper
@@ -15533,7 +15755,9 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
           data_sources: {},
           renderers: [],
           tools: [],
-          title: 'Plot'
+          title: 'Plot',
+          x_mapper_type: 'auto',
+          y_mapper_type: 'auto'
         };
       };
 
@@ -17095,9 +17319,9 @@ if (typeof define === 'function' && define.amd) {
         } else if (resample_op === 'heatmap') {
           return serversource.listen_for_heatmap_updates(this.mget_obj('data_source'), x_range, y_range, this.plot_view.x_range, this.plot_view.y_range, transform_params);
         } else if (resample_op === 'abstract rendering') {
-          return serversource.listen_for_ar_updates(this.mget_obj('data_source'), x_range, y_range, this.plot_view.x_range, this.plot_view.y_range, transform_params);
+          return serversource.listen_for_ar_updates(this.plot_view, this.mget_obj('data_source'), x_range, y_range, this.plot_view.x_range, this.plot_view.y_range, transform_params);
         } else {
-          throw new Error("Unkonwn resample op '" + resample_op + "'");
+          return console.log("Unkonwn resample op '" + resample_op + "'");
         }
       };
 
@@ -21805,25 +22029,7 @@ return { create_gear_tooth: createGearTooth, create_internal_gear_tooth: createI
       };
 
       RectView.prototype.draw_legend = function(ctx, x0, x1, y0, y1) {
-        var d, indices, reference_point, scale, sh, sw, sx, sy, _ref1;
-        reference_point = (_ref1 = this.get_reference_point()) != null ? _ref1 : 0;
-        indices = [reference_point];
-        sx = {};
-        sx[reference_point] = (x0 + x1) / 2;
-        sy = {};
-        sy[reference_point] = (y0 + y1) / 2;
-        scale = this.sw[reference_point] / this.sh[reference_point];
-        d = Math.min(Math.abs(x1 - x0), Math.abs(y1 - y0)) * 0.8;
-        sw = {};
-        sh = {};
-        if (scale > 1) {
-          sw[reference_point] = d;
-          sh[reference_point] = d / scale;
-        } else {
-          sw[reference_point] = d * scale;
-          sh[reference_point] = d;
-        }
-        return this._render(ctx, indices, this.glyph_props, sx, sy, sw, sh);
+        return this._generic_area_legend(ctx, x0, x1, y0, y1);
       };
 
       return RectView;
@@ -24696,7 +24902,7 @@ return { create_gear_tooth: createGearTooth, create_internal_gear_tooth: createI
 */;
 (function(root) {
 define("sprintf", [], function() {
-  return (function() {
+      return (function() {
 /*! sprintf.js | Copyright (c) 2007-2013 Alexandru Marasteanu <hello at alexei dot ro> | 3 clause BSD license */
 
 (function(ctx) {
@@ -24831,10 +25037,8 @@ define("sprintf", [], function() {
 	ctx.sprintf = sprintf;
 	ctx.vsprintf = vsprintf;
 })(typeof exports != "undefined" ? exports : window);
-
-return root.sprintf = sprintf;
-  }).apply(root, arguments);
-});
+return root.sprintf = sprintf;      }).apply(root, arguments);
+    });
 }(this));
 
 !function (definition) {
@@ -25895,6 +26099,309 @@ return root.sprintf = sprintf;
   var __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
+  define('ticking/log_ticker',["ticking/adaptive_ticker"], function(AdaptiveTicker) {
+    var LogTicker, LogTickers, range, _ref, _ref1;
+    range = function(start, stop, step) {
+      var i, result;
+      if (typeof stop === "undefined") {
+        stop = start;
+        start = 0;
+      }
+      if (typeof step === "undefined") {
+        step = 1;
+      }
+      if ((step > 0 && start >= stop) || (step < 0 && start <= stop)) {
+        return [];
+      }
+      result = [];
+      i = start;
+      while ((step > 0 ? i < stop : i > stop)) {
+        result.push(i);
+        i += step;
+      }
+      return result;
+    };
+    LogTicker = (function(_super) {
+      __extends(LogTicker, _super);
+
+      function LogTicker() {
+        _ref = LogTicker.__super__.constructor.apply(this, arguments);
+        return _ref;
+      }
+
+      LogTicker.prototype.type = 'LogTicker';
+
+      LogTicker.prototype.initialize = function(attrs, options) {
+        return LogTicker.__super__.initialize.call(this, attrs, options);
+      };
+
+      LogTicker.prototype.get_ticks_no_defaults = function(data_low, data_high, desired_n_ticks) {
+        var end_factor, endlog, factor, factors, i, interval, log_high, log_interval, log_low, minor_interval, minor_offsets, minor_ticks, num_minor_ticks, start_factor, startlog, tick, ticks, x, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref1;
+        num_minor_ticks = this.get('num_minor_ticks');
+        minor_ticks = [];
+        if (data_low <= 0) {
+          data_low = 1;
+        }
+        if (data_low > data_high) {
+          _ref1 = [data_high, data_low], data_low = _ref1[0], data_high = _ref1[1];
+        }
+        log_low = Math.log(data_low) / Math.log(10);
+        log_high = Math.log(data_high) / Math.log(10);
+        log_interval = log_high - log_low;
+        if (log_interval < 2) {
+          interval = this.get_interval(data_low, data_high, desired_n_ticks);
+          start_factor = Math.floor(data_low / interval);
+          end_factor = Math.ceil(data_high / interval);
+          if (_.isNaN(start_factor) || _.isNaN(end_factor)) {
+            factors = [];
+          } else {
+            factors = _.range(start_factor, end_factor + 1);
+          }
+          ticks = (function() {
+            var _i, _len, _results;
+            _results = [];
+            for (_i = 0, _len = factors.length; _i < _len; _i++) {
+              factor = factors[_i];
+              if (factor !== 0) {
+                _results.push(factor * interval);
+              }
+            }
+            return _results;
+          })();
+          if (num_minor_ticks > 1) {
+            minor_interval = interval / num_minor_ticks;
+            minor_offsets = (function() {
+              var _i, _results;
+              _results = [];
+              for (i = _i = 1; 1 <= num_minor_ticks ? _i <= num_minor_ticks : _i >= num_minor_ticks; i = 1 <= num_minor_ticks ? ++_i : --_i) {
+                _results.push(i * minor_interval);
+              }
+              return _results;
+            })();
+            for (_i = 0, _len = minor_offsets.length; _i < _len; _i++) {
+              x = minor_offsets[_i];
+              minor_ticks.push(ticks[0] - x);
+            }
+            for (_j = 0, _len1 = ticks.length; _j < _len1; _j++) {
+              tick = ticks[_j];
+              for (_k = 0, _len2 = minor_offsets.length; _k < _len2; _k++) {
+                x = minor_offsets[_k];
+                minor_ticks.push(tick + x);
+              }
+            }
+          }
+        } else {
+          startlog = Math.ceil(log_low);
+          endlog = Math.floor(log_high);
+          interval = Math.ceil((endlog - startlog) / 9.0);
+          ticks = range(startlog, endlog, interval);
+          if ((endlog - startlog) % interval === 0) {
+            ticks = ticks.concat([endlog]);
+          }
+          ticks = ticks.map(function(i) {
+            return Math.pow(10, i);
+          });
+          if (num_minor_ticks > 1) {
+            minor_interval = Math.pow(10, interval) / num_minor_ticks;
+            minor_offsets = (function() {
+              var _l, _results;
+              _results = [];
+              for (i = _l = 1; 1 <= num_minor_ticks ? _l <= num_minor_ticks : _l >= num_minor_ticks; i = 1 <= num_minor_ticks ? ++_l : --_l) {
+                _results.push(i * minor_interval);
+              }
+              return _results;
+            })();
+            for (_l = 0, _len3 = minor_offsets.length; _l < _len3; _l++) {
+              x = minor_offsets[_l];
+              minor_ticks.push(ticks[0] / x);
+            }
+            for (_m = 0, _len4 = ticks.length; _m < _len4; _m++) {
+              tick = ticks[_m];
+              for (_n = 0, _len5 = minor_offsets.length; _n < _len5; _n++) {
+                x = minor_offsets[_n];
+                minor_ticks.push(tick * x);
+              }
+            }
+          }
+        }
+        return {
+          "major": ticks,
+          "minor": minor_ticks
+        };
+      };
+
+      LogTicker.prototype.defaults = function() {
+        return _.extend(LogTicker.__super__.defaults.call(this), {
+          mantissas: [1, 5]
+        });
+      };
+
+      return LogTicker;
+
+    })(AdaptiveTicker.Model);
+    LogTickers = (function(_super) {
+      __extends(LogTickers, _super);
+
+      function LogTickers() {
+        _ref1 = LogTickers.__super__.constructor.apply(this, arguments);
+        return _ref1;
+      }
+
+      LogTickers.prototype.model = LogTicker;
+
+      return LogTickers;
+
+    })(Backbone.Collection);
+    return {
+      "Model": LogTicker,
+      "Collection": new LogTickers()
+    };
+  });
+
+}).call(this);
+
+/*
+//@ sourceMappingURL=log_ticker.js.map
+*/;
+(function() {
+  var __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  define('ticking/log_tick_formatter',["underscore", "backbone", "common/has_properties", "ticking/basic_tick_formatter"], function(_, Backbone, HasProperties, BasicTickFormatter) {
+    var LogTickFormatter, LogTickFormatters, _ref, _ref1;
+    LogTickFormatter = (function(_super) {
+      __extends(LogTickFormatter, _super);
+
+      function LogTickFormatter() {
+        _ref = LogTickFormatter.__super__.constructor.apply(this, arguments);
+        return _ref;
+      }
+
+      LogTickFormatter.prototype.type = 'LogTickFormatter';
+
+      LogTickFormatter.prototype.dinitialize = function(attrs, options) {
+        LogTickFormatter.__super__.dinitialize.call(this, attrs, options);
+        return this.basic_formatter = new BasicTickFormatter.Model();
+      };
+
+      LogTickFormatter.prototype.format = function(ticks) {
+        var i, labels, small_interval, _i, _ref1;
+        if (ticks.length === 0) {
+          return [];
+        }
+        small_interval = false;
+        labels = new Array(ticks.length);
+        for (i = _i = 0, _ref1 = ticks.length; 0 <= _ref1 ? _i < _ref1 : _i > _ref1; i = 0 <= _ref1 ? ++_i : --_i) {
+          labels[i] = "10^" + (Math.round(Math.log(ticks[i]) / Math.log(10)));
+          if ((i > 0) && (labels[i] === labels[i - 1])) {
+            small_interval = true;
+            break;
+          }
+        }
+        if (small_interval) {
+          labels = this.basic_formatter.format(ticks);
+        }
+        return labels;
+      };
+
+      return LogTickFormatter;
+
+    })(HasProperties);
+    LogTickFormatters = (function(_super) {
+      __extends(LogTickFormatters, _super);
+
+      function LogTickFormatters() {
+        _ref1 = LogTickFormatters.__super__.constructor.apply(this, arguments);
+        return _ref1;
+      }
+
+      LogTickFormatters.prototype.model = LogTickFormatter;
+
+      return LogTickFormatters;
+
+    })(Backbone.Collection);
+    return {
+      "Model": LogTickFormatter,
+      "Collection": new LogTickFormatters()
+    };
+  });
+
+}).call(this);
+
+/*
+//@ sourceMappingURL=log_tick_formatter.js.map
+*/;
+(function() {
+  var __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  define('renderer/guide/log_axis',["underscore", "backbone", "./axis", "ticking/log_ticker", "ticking/log_tick_formatter"], function(_, Backbone, Axis, LogTicker, LogTickFormatter) {
+    var LogAxes, LogAxis, LogAxisView, _ref, _ref1, _ref2;
+    LogAxisView = (function(_super) {
+      __extends(LogAxisView, _super);
+
+      function LogAxisView() {
+        _ref = LogAxisView.__super__.constructor.apply(this, arguments);
+        return _ref;
+      }
+
+      return LogAxisView;
+
+    })(Axis.View);
+    LogAxis = (function(_super) {
+      __extends(LogAxis, _super);
+
+      function LogAxis() {
+        _ref1 = LogAxis.__super__.constructor.apply(this, arguments);
+        return _ref1;
+      }
+
+      LogAxis.prototype.default_view = LogAxisView;
+
+      LogAxis.prototype.type = 'LogAxis';
+
+      LogAxis.prototype.dinitialize = function(attrs, objects) {
+        LogAxis.__super__.dinitialize.call(this, attrs, objects);
+        if (this.get_obj('ticker') == null) {
+          this.set_obj('ticker', LogTicker.Collection.create());
+        }
+        if (this.get_obj('formatter') == null) {
+          return this.set_obj('formatter', LogTickFormatter.Collection.create());
+        }
+      };
+
+      return LogAxis;
+
+    })(Axis.Model);
+    LogAxes = (function(_super) {
+      __extends(LogAxes, _super);
+
+      function LogAxes() {
+        _ref2 = LogAxes.__super__.constructor.apply(this, arguments);
+        return _ref2;
+      }
+
+      LogAxes.prototype.model = LogAxis;
+
+      return LogAxes;
+
+    })(Backbone.Collection);
+    return {
+      "Model": LogAxis,
+      "Collection": new LogAxes(),
+      "View": LogAxisView
+    };
+  });
+
+}).call(this);
+
+/*
+//@ sourceMappingURL=log_axis.js.map
+*/;
+(function() {
+  var __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
   define('renderer/overlay/box_selection',["underscore", "common/has_parent", "common/plot_widget"], function(_, HasParent, PlotWidget) {
     var BoxSelection, BoxSelectionView, BoxSelections, _ref, _ref1, _ref2;
     BoxSelectionView = (function(_super) {
@@ -26242,7 +26749,7 @@ return root.sprintf = sprintf;
         });
       };
 
-      ServerDataSource.prototype.listen_for_ar_updates = function(column_data_source, plot_x_range, plot_y_range, x_data_range, y_data_range, input_params) {
+      ServerDataSource.prototype.listen_for_ar_updates = function(plot_view, column_data_source, plot_x_range, plot_y_range, x_data_range, y_data_range, input_params) {
         var callback, param, plot_state, _i, _len, _ref1,
           _this = this;
         plot_state = {
@@ -26253,7 +26760,7 @@ return root.sprintf = sprintf;
         };
         this.stoplistening_for_updates(column_data_source);
         callback = ajax_throttle(function() {
-          return _this.ar_update(column_data_source, plot_state, input_params);
+          return _this.ar_update(plot_view, column_data_source, plot_state, input_params);
         });
         callback();
         this.callbacks[column_data_source.get('id')] = [];
@@ -26270,8 +26777,13 @@ return root.sprintf = sprintf;
         return null;
       };
 
-      ServerDataSource.prototype.ar_update = function(column_data_source, plot_state, input_params) {
-        return $.ajax({
+      ServerDataSource.prototype.ar_update = function(plot_view, column_data_source, plot_state, input_params, x_data_range, y_data_range) {
+        var domain_limit, resp;
+        domain_limit = 'not auto';
+        if (plot_view.x_range.get('start') === plot_view.x_range.get('end') || plot_view.y_range.get('start') === plot_view.y_range.get('end')) {
+          domain_limit = 'auto';
+        }
+        resp = $.ajax({
           dataType: 'json',
           url: this.update_url(),
           xhrField: {
@@ -26279,15 +26791,27 @@ return root.sprintf = sprintf;
           },
           success: function(data) {
             var new_data;
+            if (domain_limit === 'auto') {
+              plot_state['data_x'].set({
+                start: data.x_range.start,
+                end: data.x_range.end
+              });
+              plot_state['data_y'].set({
+                start: data.y_range.start,
+                end: data.y_range.end
+              });
+            }
             new_data = _.clone(column_data_source.get('data'));
             _.extend(new_data, data);
-            return column_data_source.set('data', new_data);
+            column_data_source.set('data', new_data);
+            return plot_view.request_render();
           },
           data: {
             resample_parameters: JSON.stringify([input_params]),
             plot_state: JSON.stringify(plot_state)
           }
         });
+        return resp;
       };
 
       ServerDataSource.prototype.listen_for_heatmap_updates = function(column_data_source, plot_x_range, plot_y_range, x_data_range, y_data_range, input_params) {
@@ -28782,7 +29306,7 @@ define('tool/preview_save_tool_template',[],function(){
       ResizeToolView.prototype.evgen_options = {
         keyName: "",
         buttonText: "Resize",
-        buttonIcon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd+UAAABO0lEQVRIS+2W3RHCIBCEpQNLsAQ7UCvREmIF2oG2YCVqB0kHlmAHeHvDzVz40QQyjA9hhpcA98Fy3MYsKjdTmbeoD7TWruiU+8hJb8aYV44CFPNM66y3luMZGtzSwD0SeEcTHplAH4YwHE8DO/rYKEBLE96ZQBxC2sEpGACfBNATc1jBGifvKXZCBtIEyLiZgCbxcJ894Jo+XKlDwkYBIXGWpG7DAoSk6A3Fb4NnoYClSRO9op/ARIqnFOfUpzXI0mxgLMVTQFZlBvbk8ZPGyTP0lcyShvb0D5KOqa9c8IuexdBs0fO+AmkQtfRCvfNqaVtQS6GKrqUw+CPXUmXAMgGFHJsobWIGgVtgN3D86n4ICbXjQ+Ise3KqSQ0Wewoc35ew1J6i8XCHy8SdTfVPI2COV/+/tDQVx67/AE3wMizROWPwAAAAAElFTkSuQmCC",
+        buttonIcon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd+UAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAABx0RVh0U29mdHdhcmUAQWRvYmUgRmlyZXdvcmtzIENTNui8sowAAAB7SURBVEiJ7ZZLDsAgCESdxvtfmW5aUpAQE6gmhtnpgsdHM4CI2kpdS2k7gF2dub8AEAlMclYcSwPDoG+chykeyQA0sgtx9YWYYVZ1HtSsMJqA16Hzv0UBC1jAAh4IdN0i0RdZosI/AG3G8bOM2Mp/AL5VJi9RLNQinK0b0hcrObYWZu0AAAAASUVORK5CYII=",
         cursor: "move"
       };
 
@@ -57830,7 +58354,7 @@ define('widget/crossfiltertemplate',[],function(){
       return _safe(result);
     };
     (function() {
-      _print(_safe('<div class="bk-crossfilter-container">\n  <table>\n    <tr>\n      <td class="aligntable">\n        <div class="bk-crossfilter-configuration bk-bs-container">\n          <div class="bk-crossfilter-row">\n            <div class="col-md-4 bk-column-list">\n            </div>\n            <div class="col-md-4 bk-filters-facets">\n              <div class="bk-bs-panel bk-bs-panel-primary bk-filters">\n                <div class="bk-bs-panel-heading bk-crossfilter-panel-heading">\n                  Filter\n                </div>\n                <div class="bk-bs-panel-body bk-filters-selections">\n                </div>\n              </div>\n              <div class="bk-bs-panel bk-bs-panel-primary bk-facet bk-facet-x">\n                <div class="bk-bs-panel-heading bk-crossfilter-panel-heading">\n                  Facet X\n                </div>\n                <div class="bk-facets-selections ">\n                </div>\n              </div>\n              <div class="bk-bs-panel bk-bs-panel-primary bk-facet bk-facet-y">\n                <div class="bk-bs-panel-heading bk-crossfilter-panel-heading">\n                  Facet Y\n                </div>\n                <div class="bk-facets-selections ">\n                </div>\n              </div>\n              <div class="bk-bs-panel bk-bs-panel-primary bk-facet bk-facet-tab">\n                <div class="bk-bs-panel-heading bk-crossfilter-panel-heading">\n                  Facet Tab\n                </div>\n                <div class="bk-facets-selections ">\n                </div>\n              </div>\n            </div>\n            <div class="col-md-4 bk-plot-selection">\n              <form class="bk-widget-form">\n                <div class="bk-plot-selector">\n                </div>\n                <div class="bk-x-selector">\n                </div>\n                <div class="bk-y-selector">\n                </div>\n                <div class="bk-agg-selector">\n                </div>\n              </form>\n            </div>\n          </div>\n        </div>\n      </td>\n      <td class="aligntable">\n        <div class="bk-plot">\n        </div>\n      </td>\n    </tr>\n  </table>\n</div>\n'));
+      _print(_safe('<div class="bk-crossfilter-container">\n  <table>\n    <tr>\n      <td class="aligntable">\n        <div class="bk-crossfilter-configuration bk-bs-container">\n          <div class="bk-crossfilter-row">\n            <div class="col-md-4 bk-column-list">\n            </div>\n            <div class="col-md-5 bk-filters-facets">\n              <div class="bk-bs-panel bk-bs-panel-primary bk-filters">\n                <div class="bk-bs-panel-heading bk-crossfilter-panel-heading">\n                  Filter\n                </div>\n                <div class="bk-bs-panel-body bk-filters-selections">\n                </div>\n              </div>\n              <div class="bk-bs-panel bk-bs-panel-primary bk-facet bk-facet-x">\n                <div class="bk-bs-panel-heading bk-crossfilter-panel-heading">\n                  Facet X\n                </div>\n                <div class="bk-facets-selections ">\n                </div>\n              </div>\n              <div class="bk-bs-panel bk-bs-panel-primary bk-facet bk-facet-y">\n                <div class="bk-bs-panel-heading bk-crossfilter-panel-heading">\n                  Facet Y\n                </div>\n                <div class="bk-facets-selections ">\n                </div>\n              </div>\n              <div class="bk-bs-panel bk-bs-panel-primary bk-facet bk-facet-tab">\n                <div class="bk-bs-panel-heading bk-crossfilter-panel-heading">\n                  Facet Tab (Coming Soon)\n                </div>\n                <div class="bk-facets-selections ">\n                </div>\n              </div>\n            </div>\n            <div class="col-md-3 bk-plot-selection">\n              <form class="bk-widget-form">\n                <div class="bk-plot-selector">\n                </div>\n                <div class="bk-x-selector">\n                </div>\n                <div class="bk-y-selector">\n                </div>\n                <div class="bk-agg-selector">\n                </div>\n              </form>\n            </div>\n          </div>\n        </div>\n      </td>\n      <td class="aligntable">\n        <div class="bk-plot">\n        </div>\n      </td>\n    </tr>\n  </table>\n</div>\n'));
     
     }).call(this);
     
@@ -58450,7 +58974,7 @@ define('widget/facetcolumntemplate',[],function(){
         _.map(this.views, function(view) {
           return view.$el.detach();
         });
-        this.$el.find('bk-filters-selections').empty();
+        this.$el.find('.bk-filters-selections').empty();
         filter_widget_dict = {};
         _ref8 = this.mget('filter_widgets');
         for (key in _ref8) {
@@ -58734,12 +59258,214 @@ define('widget/volumeslicer/volumeslicertemplate',[],function(){
   return template;
 });
 
+/*! Copyright (c) 2013 Brandon Aaron (http://brandon.aaron.sh)
+ * Licensed under the MIT License (LICENSE.txt).
+ *
+ * Version: 3.1.9
+ *
+ * Requires: jQuery 1.2.2+
+ */
+
+(function (factory) {
+    if ( typeof define === 'function' && define.amd ) {
+        // AMD. Register as an anonymous module.
+        define('jquery_mousewheel',['jquery'], factory);
+    } else if (typeof exports === 'object') {
+        // Node/CommonJS style for Browserify
+        module.exports = factory;
+    } else {
+        // Browser globals
+        factory(jQuery);
+    }
+}(function ($) {
+
+    var toFix  = ['wheel', 'mousewheel', 'DOMMouseScroll', 'MozMousePixelScroll'],
+        toBind = ( 'onwheel' in document || document.documentMode >= 9 ) ?
+                    ['wheel'] : ['mousewheel', 'DomMouseScroll', 'MozMousePixelScroll'],
+        slice  = Array.prototype.slice,
+        nullLowestDeltaTimeout, lowestDelta;
+
+    if ( $.event.fixHooks ) {
+        for ( var i = toFix.length; i; ) {
+            $.event.fixHooks[ toFix[--i] ] = $.event.mouseHooks;
+        }
+    }
+
+    var special = $.event.special.mousewheel = {
+        version: '3.1.9',
+
+        setup: function() {
+            if ( this.addEventListener ) {
+                for ( var i = toBind.length; i; ) {
+                    this.addEventListener( toBind[--i], handler, false );
+                }
+            } else {
+                this.onmousewheel = handler;
+            }
+            // Store the line height and page height for this particular element
+            $.data(this, 'mousewheel-line-height', special.getLineHeight(this));
+            $.data(this, 'mousewheel-page-height', special.getPageHeight(this));
+        },
+
+        teardown: function() {
+            if ( this.removeEventListener ) {
+                for ( var i = toBind.length; i; ) {
+                    this.removeEventListener( toBind[--i], handler, false );
+                }
+            } else {
+                this.onmousewheel = null;
+            }
+        },
+
+        getLineHeight: function(elem) {
+            return parseInt($(elem)['offsetParent' in $.fn ? 'offsetParent' : 'parent']().css('fontSize'), 10);
+        },
+
+        getPageHeight: function(elem) {
+            return $(elem).height();
+        },
+
+        settings: {
+            adjustOldDeltas: true
+        }
+    };
+
+    $.fn.extend({
+        mousewheel: function(fn) {
+            return fn ? this.bind('mousewheel', fn) : this.trigger('mousewheel');
+        },
+
+        unmousewheel: function(fn) {
+            return this.unbind('mousewheel', fn);
+        }
+    });
+
+
+    function handler(event) {
+        var orgEvent   = event || window.event,
+            args       = slice.call(arguments, 1),
+            delta      = 0,
+            deltaX     = 0,
+            deltaY     = 0,
+            absDelta   = 0;
+        event = $.event.fix(orgEvent);
+        event.type = 'mousewheel';
+
+        // Old school scrollwheel delta
+        if ( 'detail'      in orgEvent ) { deltaY = orgEvent.detail * -1;      }
+        if ( 'wheelDelta'  in orgEvent ) { deltaY = orgEvent.wheelDelta;       }
+        if ( 'wheelDeltaY' in orgEvent ) { deltaY = orgEvent.wheelDeltaY;      }
+        if ( 'wheelDeltaX' in orgEvent ) { deltaX = orgEvent.wheelDeltaX * -1; }
+
+        // Firefox < 17 horizontal scrolling related to DOMMouseScroll event
+        if ( 'axis' in orgEvent && orgEvent.axis === orgEvent.HORIZONTAL_AXIS ) {
+            deltaX = deltaY * -1;
+            deltaY = 0;
+        }
+
+        // Set delta to be deltaY or deltaX if deltaY is 0 for backwards compatabilitiy
+        delta = deltaY === 0 ? deltaX : deltaY;
+
+        // New school wheel delta (wheel event)
+        if ( 'deltaY' in orgEvent ) {
+            deltaY = orgEvent.deltaY * -1;
+            delta  = deltaY;
+        }
+        if ( 'deltaX' in orgEvent ) {
+            deltaX = orgEvent.deltaX;
+            if ( deltaY === 0 ) { delta  = deltaX * -1; }
+        }
+
+        // No change actually happened, no reason to go any further
+        if ( deltaY === 0 && deltaX === 0 ) { return; }
+
+        // Need to convert lines and pages to pixels if we aren't already in pixels
+        // There are three delta modes:
+        //   * deltaMode 0 is by pixels, nothing to do
+        //   * deltaMode 1 is by lines
+        //   * deltaMode 2 is by pages
+        if ( orgEvent.deltaMode === 1 ) {
+            var lineHeight = $.data(this, 'mousewheel-line-height');
+            delta  *= lineHeight;
+            deltaY *= lineHeight;
+            deltaX *= lineHeight;
+        } else if ( orgEvent.deltaMode === 2 ) {
+            var pageHeight = $.data(this, 'mousewheel-page-height');
+            delta  *= pageHeight;
+            deltaY *= pageHeight;
+            deltaX *= pageHeight;
+        }
+
+        // Store lowest absolute delta to normalize the delta values
+        absDelta = Math.max( Math.abs(deltaY), Math.abs(deltaX) );
+
+        if ( !lowestDelta || absDelta < lowestDelta ) {
+            lowestDelta = absDelta;
+
+            // Adjust older deltas if necessary
+            if ( shouldAdjustOldDeltas(orgEvent, absDelta) ) {
+                lowestDelta /= 40;
+            }
+        }
+
+        // Adjust older deltas if necessary
+        if ( shouldAdjustOldDeltas(orgEvent, absDelta) ) {
+            // Divide all the things by 40!
+            delta  /= 40;
+            deltaX /= 40;
+            deltaY /= 40;
+        }
+
+        // Get a whole, normalized value for the deltas
+        delta  = Math[ delta  >= 1 ? 'floor' : 'ceil' ](delta  / lowestDelta);
+        deltaX = Math[ deltaX >= 1 ? 'floor' : 'ceil' ](deltaX / lowestDelta);
+        deltaY = Math[ deltaY >= 1 ? 'floor' : 'ceil' ](deltaY / lowestDelta);
+
+        // Add information to the event object
+        event.deltaX = deltaX;
+        event.deltaY = deltaY;
+        event.deltaFactor = lowestDelta;
+        // Go ahead and set deltaMode to 0 since we converted to pixels
+        // Although this is a little odd since we overwrite the deltaX/Y
+        // properties with normalized deltas.
+        event.deltaMode = 0;
+
+        // Add event and delta to the front of the arguments
+        args.unshift(event, delta, deltaX, deltaY);
+
+        // Clearout lowestDelta after sometime to better
+        // handle multiple device types that give different
+        // a different lowestDelta
+        // Ex: trackpad = 3 and mouse wheel = 120
+        if (nullLowestDeltaTimeout) { clearTimeout(nullLowestDeltaTimeout); }
+        nullLowestDeltaTimeout = setTimeout(nullLowestDelta, 200);
+
+        return ($.event.dispatch || $.event.handle).apply(this, args);
+    }
+
+    function nullLowestDelta() {
+        lowestDelta = null;
+    }
+
+    function shouldAdjustOldDeltas(orgEvent, absDelta) {
+        // If this is an older event and the delta is divisable by 120,
+        // then we are assuming that the browser is treating this as an
+        // older mouse wheel event and that we should divide the deltas
+        // by 40 to try and get a more usable deltaFactor.
+        // Side note, this actually impacts the reported scroll distance
+        // in older browsers and can cause scrolling to be slower than native.
+        // Turn this off by setting $.event.special.mousewheel.settings.adjustOldDeltas to false.
+        return special.settings.adjustOldDeltas && orgEvent.type === 'mousewheel' && absDelta % 120 === 0;
+    }
+
+}));
+
 (function() {
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-  define('widget/volumeslicer/volumeslicer',["common/has_parent", "common/continuum_view", "./volumeslicertemplate", "jquery_ui/slider"], function(HasParent, ContinuumView, template, slider) {
+  define('widget/volumeslicer/volumeslicer',["common/has_parent", "common/continuum_view", "./volumeslicertemplate", "jquery_ui/core", "jquery_ui/widget", "jquery_ui/mouse", "jquery_mousewheel", "jquery_ui/slider"], function(HasParent, ContinuumView, template, core, widget, mouse, mousewheel, slider) {
     var VolumeSlicer, VolumeSlicerView, VolumeSlicers, _ref, _ref1, _ref2;
     VolumeSlicerView = (function(_super) {
       __extends(VolumeSlicerView, _super);
@@ -58875,9 +59601,9 @@ define('widget/volumeslicer/volumeslicertemplate',[],function(){
         this.$(".horiz_plot").append(this.horiz_plot_view.$el);
         this.z_slice_max = this.mget('shape')[2];
         this.z_slice_min = 0;
-        this.y_slice_max = this.mget('shape')[0];
+        this.y_slice_max = this.mget('shape')[1];
         this.y_slice_min = 0;
-        this.x_slice_max = this.mget('shape')[1];
+        this.x_slice_max = this.mget('shape')[0];
         this.x_slice_min = 0;
         this.$el.find(".app_slider").slider({
           orientation: "vertical",
@@ -59162,216 +59888,12 @@ define('widget/multiselecttemplate',[],function(){
 /*
 //@ sourceMappingURL=multiselect.js.map
 */;
-/*! Copyright (c) 2013 Brandon Aaron (http://brandon.aaron.sh)
- * Licensed under the MIT License (LICENSE.txt).
- *
- * Version: 3.1.9
- *
- * Requires: jQuery 1.2.2+
- */
-
-(function (factory) {
-    if ( typeof define === 'function' && define.amd ) {
-        // AMD. Register as an anonymous module.
-        define('jquery_mousewheel',['jquery'], factory);
-    } else if (typeof exports === 'object') {
-        // Node/CommonJS style for Browserify
-        module.exports = factory;
-    } else {
-        // Browser globals
-        factory(jQuery);
-    }
-}(function ($) {
-
-    var toFix  = ['wheel', 'mousewheel', 'DOMMouseScroll', 'MozMousePixelScroll'],
-        toBind = ( 'onwheel' in document || document.documentMode >= 9 ) ?
-                    ['wheel'] : ['mousewheel', 'DomMouseScroll', 'MozMousePixelScroll'],
-        slice  = Array.prototype.slice,
-        nullLowestDeltaTimeout, lowestDelta;
-
-    if ( $.event.fixHooks ) {
-        for ( var i = toFix.length; i; ) {
-            $.event.fixHooks[ toFix[--i] ] = $.event.mouseHooks;
-        }
-    }
-
-    var special = $.event.special.mousewheel = {
-        version: '3.1.9',
-
-        setup: function() {
-            if ( this.addEventListener ) {
-                for ( var i = toBind.length; i; ) {
-                    this.addEventListener( toBind[--i], handler, false );
-                }
-            } else {
-                this.onmousewheel = handler;
-            }
-            // Store the line height and page height for this particular element
-            $.data(this, 'mousewheel-line-height', special.getLineHeight(this));
-            $.data(this, 'mousewheel-page-height', special.getPageHeight(this));
-        },
-
-        teardown: function() {
-            if ( this.removeEventListener ) {
-                for ( var i = toBind.length; i; ) {
-                    this.removeEventListener( toBind[--i], handler, false );
-                }
-            } else {
-                this.onmousewheel = null;
-            }
-        },
-
-        getLineHeight: function(elem) {
-            return parseInt($(elem)['offsetParent' in $.fn ? 'offsetParent' : 'parent']().css('fontSize'), 10);
-        },
-
-        getPageHeight: function(elem) {
-            return $(elem).height();
-        },
-
-        settings: {
-            adjustOldDeltas: true
-        }
-    };
-
-    $.fn.extend({
-        mousewheel: function(fn) {
-            return fn ? this.bind('mousewheel', fn) : this.trigger('mousewheel');
-        },
-
-        unmousewheel: function(fn) {
-            return this.unbind('mousewheel', fn);
-        }
-    });
-
-
-    function handler(event) {
-        var orgEvent   = event || window.event,
-            args       = slice.call(arguments, 1),
-            delta      = 0,
-            deltaX     = 0,
-            deltaY     = 0,
-            absDelta   = 0;
-        event = $.event.fix(orgEvent);
-        event.type = 'mousewheel';
-
-        // Old school scrollwheel delta
-        if ( 'detail'      in orgEvent ) { deltaY = orgEvent.detail * -1;      }
-        if ( 'wheelDelta'  in orgEvent ) { deltaY = orgEvent.wheelDelta;       }
-        if ( 'wheelDeltaY' in orgEvent ) { deltaY = orgEvent.wheelDeltaY;      }
-        if ( 'wheelDeltaX' in orgEvent ) { deltaX = orgEvent.wheelDeltaX * -1; }
-
-        // Firefox < 17 horizontal scrolling related to DOMMouseScroll event
-        if ( 'axis' in orgEvent && orgEvent.axis === orgEvent.HORIZONTAL_AXIS ) {
-            deltaX = deltaY * -1;
-            deltaY = 0;
-        }
-
-        // Set delta to be deltaY or deltaX if deltaY is 0 for backwards compatabilitiy
-        delta = deltaY === 0 ? deltaX : deltaY;
-
-        // New school wheel delta (wheel event)
-        if ( 'deltaY' in orgEvent ) {
-            deltaY = orgEvent.deltaY * -1;
-            delta  = deltaY;
-        }
-        if ( 'deltaX' in orgEvent ) {
-            deltaX = orgEvent.deltaX;
-            if ( deltaY === 0 ) { delta  = deltaX * -1; }
-        }
-
-        // No change actually happened, no reason to go any further
-        if ( deltaY === 0 && deltaX === 0 ) { return; }
-
-        // Need to convert lines and pages to pixels if we aren't already in pixels
-        // There are three delta modes:
-        //   * deltaMode 0 is by pixels, nothing to do
-        //   * deltaMode 1 is by lines
-        //   * deltaMode 2 is by pages
-        if ( orgEvent.deltaMode === 1 ) {
-            var lineHeight = $.data(this, 'mousewheel-line-height');
-            delta  *= lineHeight;
-            deltaY *= lineHeight;
-            deltaX *= lineHeight;
-        } else if ( orgEvent.deltaMode === 2 ) {
-            var pageHeight = $.data(this, 'mousewheel-page-height');
-            delta  *= pageHeight;
-            deltaY *= pageHeight;
-            deltaX *= pageHeight;
-        }
-
-        // Store lowest absolute delta to normalize the delta values
-        absDelta = Math.max( Math.abs(deltaY), Math.abs(deltaX) );
-
-        if ( !lowestDelta || absDelta < lowestDelta ) {
-            lowestDelta = absDelta;
-
-            // Adjust older deltas if necessary
-            if ( shouldAdjustOldDeltas(orgEvent, absDelta) ) {
-                lowestDelta /= 40;
-            }
-        }
-
-        // Adjust older deltas if necessary
-        if ( shouldAdjustOldDeltas(orgEvent, absDelta) ) {
-            // Divide all the things by 40!
-            delta  /= 40;
-            deltaX /= 40;
-            deltaY /= 40;
-        }
-
-        // Get a whole, normalized value for the deltas
-        delta  = Math[ delta  >= 1 ? 'floor' : 'ceil' ](delta  / lowestDelta);
-        deltaX = Math[ deltaX >= 1 ? 'floor' : 'ceil' ](deltaX / lowestDelta);
-        deltaY = Math[ deltaY >= 1 ? 'floor' : 'ceil' ](deltaY / lowestDelta);
-
-        // Add information to the event object
-        event.deltaX = deltaX;
-        event.deltaY = deltaY;
-        event.deltaFactor = lowestDelta;
-        // Go ahead and set deltaMode to 0 since we converted to pixels
-        // Although this is a little odd since we overwrite the deltaX/Y
-        // properties with normalized deltas.
-        event.deltaMode = 0;
-
-        // Add event and delta to the front of the arguments
-        args.unshift(event, delta, deltaX, deltaY);
-
-        // Clearout lowestDelta after sometime to better
-        // handle multiple device types that give different
-        // a different lowestDelta
-        // Ex: trackpad = 3 and mouse wheel = 120
-        if (nullLowestDeltaTimeout) { clearTimeout(nullLowestDeltaTimeout); }
-        nullLowestDeltaTimeout = setTimeout(nullLowestDelta, 200);
-
-        return ($.event.dispatch || $.event.handle).apply(this, args);
-    }
-
-    function nullLowestDelta() {
-        lowestDelta = null;
-    }
-
-    function shouldAdjustOldDeltas(orgEvent, absDelta) {
-        // If this is an older event and the delta is divisable by 120,
-        // then we are assuming that the browser is treating this as an
-        // older mouse wheel event and that we should divide the deltas
-        // by 40 to try and get a more usable deltaFactor.
-        // Side note, this actually impacts the reported scroll distance
-        // in older browsers and can cause scrolling to be slower than native.
-        // Turn this off by setting $.event.special.mousewheel.settings.adjustOldDeltas to false.
-        return special.settings.adjustOldDeltas && orgEvent.type === 'mousewheel' && absDelta % 120 === 0;
-    }
-
-}));
-
 (function(root) {
 define("jqrangeslider", ["jquery_ui/core","jquery_ui/widget","jquery_ui/mouse","jquery_mousewheel"], function() {
-  return (function() {
+      return (function() {
 /*! jQRangeSlider 5.7.0 - 2014-03-18 - Copyright (C) Guillaume Gautreau 2012 - MIT and GPLv3 licenses.*/!function(a){a.widget("ui.rangeSliderMouseTouch",a.ui.mouse,{enabled:!0,_mouseInit:function(){var b=this;a.ui.mouse.prototype._mouseInit.apply(this),this._mouseDownEvent=!1,this.element.bind("touchstart."+this.widgetName,function(a){return b._touchStart(a)})},_mouseDestroy:function(){a(document).unbind("touchmove."+this.widgetName,this._touchMoveDelegate).unbind("touchend."+this.widgetName,this._touchEndDelegate),a.ui.mouse.prototype._mouseDestroy.apply(this)},enable:function(){this.enabled=!0},disable:function(){this.enabled=!1},destroy:function(){this._mouseDestroy(),a.ui.mouse.prototype.destroy.apply(this),this._mouseInit=null},_touchStart:function(b){if(!this.enabled)return!1;b.which=1,b.preventDefault(),this._fillTouchEvent(b);var c=this,d=this._mouseDownEvent;this._mouseDown(b),d!==this._mouseDownEvent&&(this._touchEndDelegate=function(a){c._touchEnd(a)},this._touchMoveDelegate=function(a){c._touchMove(a)},a(document).bind("touchmove."+this.widgetName,this._touchMoveDelegate).bind("touchend."+this.widgetName,this._touchEndDelegate))},_mouseDown:function(b){return this.enabled?a.ui.mouse.prototype._mouseDown.apply(this,[b]):!1},_touchEnd:function(b){this._fillTouchEvent(b),this._mouseUp(b),a(document).unbind("touchmove."+this.widgetName,this._touchMoveDelegate).unbind("touchend."+this.widgetName,this._touchEndDelegate),this._mouseDownEvent=!1,a(document).trigger("mouseup")},_touchMove:function(a){return a.preventDefault(),this._fillTouchEvent(a),this._mouseMove(a)},_fillTouchEvent:function(a){var b;b="undefined"==typeof a.targetTouches&&"undefined"==typeof a.changedTouches?a.originalEvent.targetTouches[0]||a.originalEvent.changedTouches[0]:a.targetTouches[0]||a.changedTouches[0],a.pageX=b.pageX,a.pageY=b.pageY}})}(jQuery),function(a){a.widget("ui.rangeSliderDraggable",a.ui.rangeSliderMouseTouch,{cache:null,options:{containment:null},_create:function(){a.ui.rangeSliderMouseTouch.prototype._create.apply(this),setTimeout(a.proxy(this._initElementIfNotDestroyed,this),10)},destroy:function(){this.cache=null,a.ui.rangeSliderMouseTouch.prototype.destroy.apply(this)},_initElementIfNotDestroyed:function(){this._mouseInit&&this._initElement()},_initElement:function(){this._mouseInit(),this._cache()},_setOption:function(b,c){"containment"===b&&(this.options.containment=null===c||0===a(c).length?null:a(c))},_mouseStart:function(a){return this._cache(),this.cache.click={left:a.pageX,top:a.pageY},this.cache.initialOffset=this.element.offset(),this._triggerMouseEvent("mousestart"),!0},_mouseDrag:function(a){var b=a.pageX-this.cache.click.left;return b=this._constraintPosition(b+this.cache.initialOffset.left),this._applyPosition(b),this._triggerMouseEvent("sliderDrag"),!1},_mouseStop:function(){this._triggerMouseEvent("stop")},_constraintPosition:function(a){return 0!==this.element.parent().length&&null!==this.cache.parent.offset&&(a=Math.min(a,this.cache.parent.offset.left+this.cache.parent.width-this.cache.width.outer),a=Math.max(a,this.cache.parent.offset.left)),a},_applyPosition:function(a){var b={top:this.cache.offset.top,left:a};this.element.offset({left:a}),this.cache.offset=b},_cacheIfNecessary:function(){null===this.cache&&this._cache()},_cache:function(){this.cache={},this._cacheMargins(),this._cacheParent(),this._cacheDimensions(),this.cache.offset=this.element.offset()},_cacheMargins:function(){this.cache.margin={left:this._parsePixels(this.element,"marginLeft"),right:this._parsePixels(this.element,"marginRight"),top:this._parsePixels(this.element,"marginTop"),bottom:this._parsePixels(this.element,"marginBottom")}},_cacheParent:function(){if(null!==this.options.parent){var a=this.element.parent();this.cache.parent={offset:a.offset(),width:a.width()}}else this.cache.parent=null},_cacheDimensions:function(){this.cache.width={outer:this.element.outerWidth(),inner:this.element.width()}},_parsePixels:function(a,b){return parseInt(a.css(b),10)||0},_triggerMouseEvent:function(a){var b=this._prepareEventData();this.element.trigger(a,b)},_prepareEventData:function(){return{element:this.element,offset:this.cache.offset||null}}})}(jQuery),function(a,b){a.widget("ui.rangeSlider",{options:{bounds:{min:0,max:100},defaultValues:{min:20,max:50},wheelMode:null,wheelSpeed:4,arrows:!0,valueLabels:"show",formatter:null,durationIn:0,durationOut:400,delayOut:200,range:{min:!1,max:!1},step:!1,scales:!1,enabled:!0,symmetricPositionning:!1},_values:null,_valuesChanged:!1,_initialized:!1,bar:null,leftHandle:null,rightHandle:null,innerBar:null,container:null,arrows:null,labels:null,changing:{min:!1,max:!1},changed:{min:!1,max:!1},ruler:null,_create:function(){this._setDefaultValues(),this.labels={left:null,right:null,leftDisplayed:!0,rightDisplayed:!0},this.arrows={left:null,right:null},this.changing={min:!1,max:!1},this.changed={min:!1,max:!1},this._createElements(),this._bindResize(),setTimeout(a.proxy(this.resize,this),1),setTimeout(a.proxy(this._initValues,this),1)},_setDefaultValues:function(){this._values={min:this.options.defaultValues.min,max:this.options.defaultValues.max}},_bindResize:function(){var b=this;this._resizeProxy=function(a){b.resize(a)},a(window).resize(this._resizeProxy)},_initWidth:function(){this.container.css("width",this.element.width()-this.container.outerWidth(!0)+this.container.width()),this.innerBar.css("width",this.container.width()-this.innerBar.outerWidth(!0)+this.innerBar.width())},_initValues:function(){this._initialized=!0,this.values(this._values.min,this._values.max)},_setOption:function(a,b){this._setWheelOption(a,b),this._setArrowsOption(a,b),this._setLabelsOption(a,b),this._setLabelsDurations(a,b),this._setFormatterOption(a,b),this._setBoundsOption(a,b),this._setRangeOption(a,b),this._setStepOption(a,b),this._setScalesOption(a,b),this._setEnabledOption(a,b),this._setPositionningOption(a,b)},_validProperty:function(a,b,c){return null===a||"undefined"==typeof a[b]?c:a[b]},_setStepOption:function(a,b){"step"===a&&(this.options.step=b,this._leftHandle("option","step",b),this._rightHandle("option","step",b),this._changed(!0))},_setScalesOption:function(a,b){"scales"===a&&(b===!1||null===b?(this.options.scales=!1,this._destroyRuler()):b instanceof Array&&(this.options.scales=b,this._updateRuler()))},_setRangeOption:function(a,b){"range"===a&&(this._bar("option","range",b),this.options.range=this._bar("option","range"),this._changed(!0))},_setBoundsOption:function(a,b){"bounds"===a&&"undefined"!=typeof b.min&&"undefined"!=typeof b.max&&this.bounds(b.min,b.max)},_setWheelOption:function(a,b){("wheelMode"===a||"wheelSpeed"===a)&&(this._bar("option",a,b),this.options[a]=this._bar("option",a))},_setLabelsOption:function(a,b){if("valueLabels"===a){if("hide"!==b&&"show"!==b&&"change"!==b)return;this.options.valueLabels=b,"hide"!==b?(this._createLabels(),this._leftLabel("update"),this._rightLabel("update")):this._destroyLabels()}},_setFormatterOption:function(a,b){"formatter"===a&&null!==b&&"function"==typeof b&&"hide"!==this.options.valueLabels&&(this._leftLabel("option","formatter",b),this.options.formatter=this._rightLabel("option","formatter",b))},_setArrowsOption:function(a,b){"arrows"!==a||b!==!0&&b!==!1||b===this.options.arrows||(b===!0?(this.element.removeClass("ui-rangeSlider-noArrow").addClass("ui-rangeSlider-withArrows"),this.arrows.left.css("display","block"),this.arrows.right.css("display","block"),this.options.arrows=!0):b===!1&&(this.element.addClass("ui-rangeSlider-noArrow").removeClass("ui-rangeSlider-withArrows"),this.arrows.left.css("display","none"),this.arrows.right.css("display","none"),this.options.arrows=!1),this._initWidth())},_setLabelsDurations:function(a,b){if("durationIn"===a||"durationOut"===a||"delayOut"===a){if(parseInt(b,10)!==b)return;null!==this.labels.left&&this._leftLabel("option",a,b),null!==this.labels.right&&this._rightLabel("option",a,b),this.options[a]=b}},_setEnabledOption:function(a,b){"enabled"===a&&this.toggle(b)},_setPositionningOption:function(a,b){"symmetricPositionning"===a&&(this._rightHandle("option",a,b),this.options[a]=this._leftHandle("option",a,b))},_createElements:function(){"absolute"!==this.element.css("position")&&this.element.css("position","relative"),this.element.addClass("ui-rangeSlider"),this.container=a("<div class='ui-rangeSlider-container' />").css("position","absolute").appendTo(this.element),this.innerBar=a("<div class='ui-rangeSlider-innerBar' />").css("position","absolute").css("top",0).css("left",0),this._createHandles(),this._createBar(),this.container.prepend(this.innerBar),this._createArrows(),"hide"!==this.options.valueLabels?this._createLabels():this._destroyLabels(),this._updateRuler(),this.options.enabled||this._toggle(this.options.enabled)},_createHandle:function(b){return a("<div />")[this._handleType()](b).bind("sliderDrag",a.proxy(this._changing,this)).bind("stop",a.proxy(this._changed,this))},_createHandles:function(){this.leftHandle=this._createHandle({isLeft:!0,bounds:this.options.bounds,value:this._values.min,step:this.options.step,symmetricPositionning:this.options.symmetricPositionning}).appendTo(this.container),this.rightHandle=this._createHandle({isLeft:!1,bounds:this.options.bounds,value:this._values.max,step:this.options.step,symmetricPositionning:this.options.symmetricPositionning}).appendTo(this.container)},_createBar:function(){this.bar=a("<div />").prependTo(this.container).bind("sliderDrag scroll zoom",a.proxy(this._changing,this)).bind("stop",a.proxy(this._changed,this)),this._bar({leftHandle:this.leftHandle,rightHandle:this.rightHandle,values:{min:this._values.min,max:this._values.max},type:this._handleType(),range:this.options.range,wheelMode:this.options.wheelMode,wheelSpeed:this.options.wheelSpeed}),this.options.range=this._bar("option","range"),this.options.wheelMode=this._bar("option","wheelMode"),this.options.wheelSpeed=this._bar("option","wheelSpeed")},_createArrows:function(){this.arrows.left=this._createArrow("left"),this.arrows.right=this._createArrow("right"),this.options.arrows?this.element.addClass("ui-rangeSlider-withArrows"):(this.arrows.left.css("display","none"),this.arrows.right.css("display","none"),this.element.addClass("ui-rangeSlider-noArrow"))},_createArrow:function(b){var c,d=a("<div class='ui-rangeSlider-arrow' />").append("<div class='ui-rangeSlider-arrow-inner' />").addClass("ui-rangeSlider-"+b+"Arrow").css("position","absolute").css(b,0).appendTo(this.element);return c="right"===b?a.proxy(this._scrollRightClick,this):a.proxy(this._scrollLeftClick,this),d.bind("mousedown touchstart",c),d},_proxy:function(a,b,c){var d=Array.prototype.slice.call(c);return a&&a[b]?a[b].apply(a,d):null},_handleType:function(){return"rangeSliderHandle"},_barType:function(){return"rangeSliderBar"},_bar:function(){return this._proxy(this.bar,this._barType(),arguments)},_labelType:function(){return"rangeSliderLabel"},_leftLabel:function(){return this._proxy(this.labels.left,this._labelType(),arguments)},_rightLabel:function(){return this._proxy(this.labels.right,this._labelType(),arguments)},_leftHandle:function(){return this._proxy(this.leftHandle,this._handleType(),arguments)},_rightHandle:function(){return this._proxy(this.rightHandle,this._handleType(),arguments)},_getValue:function(a,b){return b===this.rightHandle&&(a-=b.outerWidth()),a*(this.options.bounds.max-this.options.bounds.min)/(this.container.innerWidth()-b.outerWidth(!0))+this.options.bounds.min},_trigger:function(a){var b=this;setTimeout(function(){b.element.trigger(a,{label:b.element,values:b.values()})},1)},_changing:function(){this._updateValues()&&(this._trigger("valuesChanging"),this._valuesChanged=!0)},_deactivateLabels:function(){"change"===this.options.valueLabels&&(this._leftLabel("option","show","hide"),this._rightLabel("option","show","hide"))},_reactivateLabels:function(){"change"===this.options.valueLabels&&(this._leftLabel("option","show","change"),this._rightLabel("option","show","change"))},_changed:function(a){a===!0&&this._deactivateLabels(),(this._updateValues()||this._valuesChanged)&&(this._trigger("valuesChanged"),a!==!0&&this._trigger("userValuesChanged"),this._valuesChanged=!1),a===!0&&this._reactivateLabels()},_updateValues:function(){var a=this._leftHandle("value"),b=this._rightHandle("value"),c=this._min(a,b),d=this._max(a,b),e=c!==this._values.min||d!==this._values.max;return this._values.min=this._min(a,b),this._values.max=this._max(a,b),e},_min:function(a,b){return Math.min(a,b)},_max:function(a,b){return Math.max(a,b)},_createLabel:function(b,c){var d;return null===b?(d=this._getLabelConstructorParameters(b,c),b=a("<div />").appendTo(this.element)[this._labelType()](d)):(d=this._getLabelRefreshParameters(b,c),b[this._labelType()](d)),b},_getLabelConstructorParameters:function(a,b){return{handle:b,handleType:this._handleType(),formatter:this._getFormatter(),show:this.options.valueLabels,durationIn:this.options.durationIn,durationOut:this.options.durationOut,delayOut:this.options.delayOut}},_getLabelRefreshParameters:function(){return{formatter:this._getFormatter(),show:this.options.valueLabels,durationIn:this.options.durationIn,durationOut:this.options.durationOut,delayOut:this.options.delayOut}},_getFormatter:function(){return this.options.formatter===!1||null===this.options.formatter?this._defaultFormatter:this.options.formatter},_defaultFormatter:function(a){return Math.round(a)},_destroyLabel:function(a){return null!==a&&(a[this._labelType()]("destroy"),a.remove(),a=null),a},_createLabels:function(){this.labels.left=this._createLabel(this.labels.left,this.leftHandle),this.labels.right=this._createLabel(this.labels.right,this.rightHandle),this._leftLabel("pair",this.labels.right)},_destroyLabels:function(){this.labels.left=this._destroyLabel(this.labels.left),this.labels.right=this._destroyLabel(this.labels.right)},_stepRatio:function(){return this._leftHandle("stepRatio")},_scrollRightClick:function(a){return this.options.enabled?(a.preventDefault(),this._bar("startScroll"),this._bindStopScroll(),this._continueScrolling("scrollRight",4*this._stepRatio(),1),void 0):!1},_continueScrolling:function(a,b,c,d){if(!this.options.enabled)return!1;this._bar(a,c),d=d||5,d--;var e=this,f=16,g=Math.max(1,4/this._stepRatio());this._scrollTimeout=setTimeout(function(){0===d&&(b>f?b=Math.max(f,b/1.5):c=Math.min(g,2*c),d=5),e._continueScrolling(a,b,c,d)},b)},_scrollLeftClick:function(a){return this.options.enabled?(a.preventDefault(),this._bar("startScroll"),this._bindStopScroll(),this._continueScrolling("scrollLeft",4*this._stepRatio(),1),void 0):!1},_bindStopScroll:function(){var b=this;this._stopScrollHandle=function(a){a.preventDefault(),b._stopScroll()},a(document).bind("mouseup touchend",this._stopScrollHandle)},_stopScroll:function(){a(document).unbind("mouseup touchend",this._stopScrollHandle),this._stopScrollHandle=null,this._bar("stopScroll"),clearTimeout(this._scrollTimeout)},_createRuler:function(){this.ruler=a("<div class='ui-rangeSlider-ruler' />").appendTo(this.innerBar)},_setRulerParameters:function(){this.ruler.ruler({min:this.options.bounds.min,max:this.options.bounds.max,scales:this.options.scales})},_destroyRuler:function(){null!==this.ruler&&a.fn.ruler&&(this.ruler.ruler("destroy"),this.ruler.remove(),this.ruler=null)},_updateRuler:function(){this._destroyRuler(),this.options.scales!==!1&&a.fn.ruler&&(this._createRuler(),this._setRulerParameters())},values:function(a,b){var c;if("undefined"!=typeof a&&"undefined"!=typeof b){if(!this._initialized)return this._values.min=a,this._values.max=b,this._values;this._deactivateLabels(),c=this._bar("values",a,b),this._changed(!0),this._reactivateLabels()}else c=this._bar("values",a,b);return c},min:function(a){return this._values.min=this.values(a,this._values.max).min,this._values.min},max:function(a){return this._values.max=this.values(this._values.min,a).max,this._values.max},bounds:function(a,b){return this._isValidValue(a)&&this._isValidValue(b)&&b>a&&(this._setBounds(a,b),this._updateRuler(),this._changed(!0)),this.options.bounds},_isValidValue:function(a){return"undefined"!=typeof a&&parseFloat(a)===a},_setBounds:function(a,b){this.options.bounds={min:a,max:b},this._leftHandle("option","bounds",this.options.bounds),this._rightHandle("option","bounds",this.options.bounds),this._bar("option","bounds",this.options.bounds)},zoomIn:function(a){this._bar("zoomIn",a)},zoomOut:function(a){this._bar("zoomOut",a)},scrollLeft:function(a){this._bar("startScroll"),this._bar("scrollLeft",a),this._bar("stopScroll")},scrollRight:function(a){this._bar("startScroll"),this._bar("scrollRight",a),this._bar("stopScroll")},resize:function(){this._initWidth(),this._leftHandle("update"),this._rightHandle("update"),this._bar("update")},enable:function(){this.toggle(!0)},disable:function(){this.toggle(!1)},toggle:function(a){a===b&&(a=!this.options.enabled),this.options.enabled!==a&&this._toggle(a)},_toggle:function(a){this.options.enabled=a,this.element.toggleClass("ui-rangeSlider-disabled",!a);var b=a?"enable":"disable";this._bar(b),this._leftHandle(b),this._rightHandle(b),this._leftLabel(b),this._rightLabel(b)},destroy:function(){this.element.removeClass("ui-rangeSlider-withArrows ui-rangeSlider-noArrow ui-rangeSlider-disabled"),this._destroyWidgets(),this._destroyElements(),this.element.removeClass("ui-rangeSlider"),this.options=null,a(window).unbind("resize",this._resizeProxy),this._resizeProxy=null,this._bindResize=null,a.Widget.prototype.destroy.apply(this,arguments)},_destroyWidget:function(a){this["_"+a]("destroy"),this[a].remove(),this[a]=null},_destroyWidgets:function(){this._destroyWidget("bar"),this._destroyWidget("leftHandle"),this._destroyWidget("rightHandle"),this._destroyRuler(),this._destroyLabels()},_destroyElements:function(){this.container.remove(),this.container=null,this.innerBar.remove(),this.innerBar=null,this.arrows.left.remove(),this.arrows.right.remove(),this.arrows=null}})}(jQuery),function(a){a.widget("ui.rangeSliderHandle",a.ui.rangeSliderDraggable,{currentMove:null,margin:0,parentElement:null,options:{isLeft:!0,bounds:{min:0,max:100},range:!1,value:0,step:!1},_value:0,_left:0,_create:function(){a.ui.rangeSliderDraggable.prototype._create.apply(this),this.element.css("position","absolute").css("top",0).addClass("ui-rangeSlider-handle").toggleClass("ui-rangeSlider-leftHandle",this.options.isLeft).toggleClass("ui-rangeSlider-rightHandle",!this.options.isLeft),this.element.append("<div class='ui-rangeSlider-handle-inner' />"),this._value=this._constraintValue(this.options.value)},destroy:function(){this.element.empty(),a.ui.rangeSliderDraggable.prototype.destroy.apply(this)},_setOption:function(b,c){"isLeft"!==b||c!==!0&&c!==!1||c===this.options.isLeft?"step"===b&&this._checkStep(c)?(this.options.step=c,this.update()):"bounds"===b?(this.options.bounds=c,this.update()):"range"===b&&this._checkRange(c)?(this.options.range=c,this.update()):"symmetricPositionning"===b&&(this.options.symmetricPositionning=c===!0,this.update()):(this.options.isLeft=c,this.element.toggleClass("ui-rangeSlider-leftHandle",this.options.isLeft).toggleClass("ui-rangeSlider-rightHandle",!this.options.isLeft),this._position(this._value),this.element.trigger("switch",this.options.isLeft)),a.ui.rangeSliderDraggable.prototype._setOption.apply(this,[b,c])},_checkRange:function(a){return a===!1||!this._isValidValue(a.min)&&!this._isValidValue(a.max)},_isValidValue:function(a){return"undefined"!=typeof a&&a!==!1&&parseFloat(a)!==a},_checkStep:function(a){return a===!1||parseFloat(a)===a},_initElement:function(){a.ui.rangeSliderDraggable.prototype._initElement.apply(this),0===this.cache.parent.width||null===this.cache.parent.width?setTimeout(a.proxy(this._initElementIfNotDestroyed,this),500):(this._position(this._value),this._triggerMouseEvent("initialize"))},_bounds:function(){return this.options.bounds},_cache:function(){a.ui.rangeSliderDraggable.prototype._cache.apply(this),this._cacheParent()},_cacheParent:function(){var a=this.element.parent();this.cache.parent={element:a,offset:a.offset(),padding:{left:this._parsePixels(a,"paddingLeft")},width:a.width()}},_position:function(a){var b=this._getPositionForValue(a);this._applyPosition(b)},_constraintPosition:function(a){var b=this._getValueForPosition(a);return this._getPositionForValue(b)},_applyPosition:function(b){a.ui.rangeSliderDraggable.prototype._applyPosition.apply(this,[b]),this._left=b,this._setValue(this._getValueForPosition(b)),this._triggerMouseEvent("moving")},_prepareEventData:function(){var b=a.ui.rangeSliderDraggable.prototype._prepareEventData.apply(this);return b.value=this._value,b},_setValue:function(a){a!==this._value&&(this._value=a)},_constraintValue:function(a){if(a=Math.min(a,this._bounds().max),a=Math.max(a,this._bounds().min),a=this._round(a),this.options.range!==!1){var b=this.options.range.min||!1,c=this.options.range.max||!1;b!==!1&&(a=Math.max(a,this._round(b))),c!==!1&&(a=Math.min(a,this._round(c))),a=Math.min(a,this._bounds().max),a=Math.max(a,this._bounds().min)}return a},_round:function(a){return this.options.step!==!1&&this.options.step>0?Math.round(a/this.options.step)*this.options.step:a},_getPositionForValue:function(a){if(!this.cache||!this.cache.parent||null===this.cache.parent.offset)return 0;a=this._constraintValue(a);var b=(a-this.options.bounds.min)/(this.options.bounds.max-this.options.bounds.min),c=this.cache.parent.width,d=this.cache.parent.offset.left,e=this.options.isLeft?0:this.cache.width.outer;return this.options.symmetricPositionning?b*(c-2*this.cache.width.outer)+d+e:b*c+d-e},_getValueForPosition:function(a){var b=this._getRawValueForPositionAndBounds(a,this.options.bounds.min,this.options.bounds.max);return this._constraintValue(b)},_getRawValueForPositionAndBounds:function(a,b,c){var d,e,f=null===this.cache.parent.offset?0:this.cache.parent.offset.left;return this.options.symmetricPositionning?(a-=this.options.isLeft?0:this.cache.width.outer,d=this.cache.parent.width-2*this.cache.width.outer):(a+=this.options.isLeft?0:this.cache.width.outer,d=this.cache.parent.width),0===d?this._value:(e=(a-f)/d,e*(c-b)+b)},value:function(a){return"undefined"!=typeof a&&(this._cache(),a=this._constraintValue(a),this._position(a)),this._value},update:function(){this._cache();var a=this._constraintValue(this._value),b=this._getPositionForValue(a);a!==this._value?(this._triggerMouseEvent("updating"),this._position(a),this._triggerMouseEvent("update")):b!==this.cache.offset.left&&(this._triggerMouseEvent("updating"),this._position(a),this._triggerMouseEvent("update"))},position:function(a){return"undefined"!=typeof a&&(this._cache(),a=this._constraintPosition(a),this._applyPosition(a)),this._left},add:function(a,b){return a+b},substract:function(a,b){return a-b},stepsBetween:function(a,b){return this.options.step===!1?b-a:(b-a)/this.options.step},multiplyStep:function(a,b){return a*b},moveRight:function(a){var b;return this.options.step===!1?(b=this._left,this.position(this._left+a),this._left-b):(b=this._value,this.value(this.add(b,this.multiplyStep(this.options.step,a))),this.stepsBetween(b,this._value))},moveLeft:function(a){return-this.moveRight(-a)},stepRatio:function(){if(this.options.step===!1)return 1;var a=(this.options.bounds.max-this.options.bounds.min)/this.options.step;return this.cache.parent.width/a}})}(jQuery),function(a){function b(a,b){return"undefined"==typeof a?b||!1:a}a.widget("ui.rangeSliderBar",a.ui.rangeSliderDraggable,{options:{leftHandle:null,rightHandle:null,bounds:{min:0,max:100},type:"rangeSliderHandle",range:!1,drag:function(){},stop:function(){},values:{min:0,max:20},wheelSpeed:4,wheelMode:null},_values:{min:0,max:20},_waitingToInit:2,_wheelTimeout:!1,_create:function(){a.ui.rangeSliderDraggable.prototype._create.apply(this),this.element.css("position","absolute").css("top",0).addClass("ui-rangeSlider-bar"),this.options.leftHandle.bind("initialize",a.proxy(this._onInitialized,this)).bind("mousestart",a.proxy(this._cache,this)).bind("stop",a.proxy(this._onHandleStop,this)),this.options.rightHandle.bind("initialize",a.proxy(this._onInitialized,this)).bind("mousestart",a.proxy(this._cache,this)).bind("stop",a.proxy(this._onHandleStop,this)),this._bindHandles(),this._values=this.options.values,this._setWheelModeOption(this.options.wheelMode)},destroy:function(){this.options.leftHandle.unbind(".bar"),this.options.rightHandle.unbind(".bar"),this.options=null,a.ui.rangeSliderDraggable.prototype.destroy.apply(this)},_setOption:function(a,b){"range"===a?this._setRangeOption(b):"wheelSpeed"===a?this._setWheelSpeedOption(b):"wheelMode"===a&&this._setWheelModeOption(b)},_setRangeOption:function(a){if(("object"!=typeof a||null===a)&&(a=!1),a!==!1||this.options.range!==!1){if(a!==!1){var c=b(a.min,this.options.range.min),d=b(a.max,this.options.range.max);this.options.range={min:c,max:d}}else this.options.range=!1;this._setLeftRange(),this._setRightRange()}},_setWheelSpeedOption:function(a){"number"==typeof a&&a>0&&(this.options.wheelSpeed=a)},_setWheelModeOption:function(a){(null===a||a===!1||"zoom"===a||"scroll"===a)&&(this.options.wheelMode!==a&&this.element.parent().unbind("mousewheel.bar"),this._bindMouseWheel(a),this.options.wheelMode=a)},_bindMouseWheel:function(b){"zoom"===b?this.element.parent().bind("mousewheel.bar",a.proxy(this._mouseWheelZoom,this)):"scroll"===b&&this.element.parent().bind("mousewheel.bar",a.proxy(this._mouseWheelScroll,this))},_setLeftRange:function(){if(this.options.range===!1)return!1;var a=this._values.max,b={min:!1,max:!1};b.max="undefined"!=typeof this.options.range.min&&this.options.range.min!==!1?this._leftHandle("substract",a,this.options.range.min):!1,b.min="undefined"!=typeof this.options.range.max&&this.options.range.max!==!1?this._leftHandle("substract",a,this.options.range.max):!1,this._leftHandle("option","range",b)},_setRightRange:function(){var a=this._values.min,b={min:!1,max:!1};b.min="undefined"!=typeof this.options.range.min&&this.options.range.min!==!1?this._rightHandle("add",a,this.options.range.min):!1,b.max="undefined"!=typeof this.options.range.max&&this.options.range.max!==!1?this._rightHandle("add",a,this.options.range.max):!1,this._rightHandle("option","range",b)},_deactivateRange:function(){this._leftHandle("option","range",!1),this._rightHandle("option","range",!1)},_reactivateRange:function(){this._setRangeOption(this.options.range)},_onInitialized:function(){this._waitingToInit--,0===this._waitingToInit&&this._initMe()},_initMe:function(){this._cache(),this.min(this._values.min),this.max(this._values.max);var a=this._leftHandle("position"),b=this._rightHandle("position")+this.options.rightHandle.width();this.element.offset({left:a}),this.element.css("width",b-a)},_leftHandle:function(){return this._handleProxy(this.options.leftHandle,arguments)},_rightHandle:function(){return this._handleProxy(this.options.rightHandle,arguments)},_handleProxy:function(a,b){var c=Array.prototype.slice.call(b);return a[this.options.type].apply(a,c)},_cache:function(){a.ui.rangeSliderDraggable.prototype._cache.apply(this),this._cacheHandles()},_cacheHandles:function(){this.cache.rightHandle={},this.cache.rightHandle.width=this.options.rightHandle.width(),this.cache.rightHandle.offset=this.options.rightHandle.offset(),this.cache.leftHandle={},this.cache.leftHandle.offset=this.options.leftHandle.offset()},_mouseStart:function(b){a.ui.rangeSliderDraggable.prototype._mouseStart.apply(this,[b]),this._deactivateRange()},_mouseStop:function(b){a.ui.rangeSliderDraggable.prototype._mouseStop.apply(this,[b]),this._cacheHandles(),this._values.min=this._leftHandle("value"),this._values.max=this._rightHandle("value"),this._reactivateRange(),this._leftHandle().trigger("stop"),this._rightHandle().trigger("stop")},_onDragLeftHandle:function(a,b){if(this._cacheIfNecessary(),b.element[0]===this.options.leftHandle[0]){if(this._switchedValues())return this._switchHandles(),this._onDragRightHandle(a,b),void 0;this._values.min=b.value,this.cache.offset.left=b.offset.left,this.cache.leftHandle.offset=b.offset,this._positionBar()}},_onDragRightHandle:function(a,b){if(this._cacheIfNecessary(),b.element[0]===this.options.rightHandle[0]){if(this._switchedValues())return this._switchHandles(),this._onDragLeftHandle(a,b),void 0;this._values.max=b.value,this.cache.rightHandle.offset=b.offset,this._positionBar()}},_positionBar:function(){var a=this.cache.rightHandle.offset.left+this.cache.rightHandle.width-this.cache.leftHandle.offset.left;this.cache.width.inner=a,this.element.css("width",a).offset({left:this.cache.leftHandle.offset.left})},_onHandleStop:function(){this._setLeftRange(),this._setRightRange()},_switchedValues:function(){if(this.min()>this.max()){var a=this._values.min;return this._values.min=this._values.max,this._values.max=a,!0}return!1},_switchHandles:function(){var a=this.options.leftHandle;this.options.leftHandle=this.options.rightHandle,this.options.rightHandle=a,this._leftHandle("option","isLeft",!0),this._rightHandle("option","isLeft",!1),this._bindHandles(),this._cacheHandles()},_bindHandles:function(){this.options.leftHandle.unbind(".bar").bind("sliderDrag.bar update.bar moving.bar",a.proxy(this._onDragLeftHandle,this)),this.options.rightHandle.unbind(".bar").bind("sliderDrag.bar update.bar moving.bar",a.proxy(this._onDragRightHandle,this))},_constraintPosition:function(b){var c,d={};return d.left=a.ui.rangeSliderDraggable.prototype._constraintPosition.apply(this,[b]),d.left=this._leftHandle("position",d.left),c=this._rightHandle("position",d.left+this.cache.width.outer-this.cache.rightHandle.width),d.width=c-d.left+this.cache.rightHandle.width,d},_applyPosition:function(b){a.ui.rangeSliderDraggable.prototype._applyPosition.apply(this,[b.left]),this.element.width(b.width)},_mouseWheelZoom:function(b,c,d,e){if(!this.enabled)return!1;var f=this._values.min+(this._values.max-this._values.min)/2,g={},h={};return this.options.range===!1||this.options.range.min===!1?(g.max=f,h.min=f):(g.max=f-this.options.range.min/2,h.min=f+this.options.range.min/2),this.options.range!==!1&&this.options.range.max!==!1&&(g.min=f-this.options.range.max/2,h.max=f+this.options.range.max/2),this._leftHandle("option","range",g),this._rightHandle("option","range",h),clearTimeout(this._wheelTimeout),this._wheelTimeout=setTimeout(a.proxy(this._wheelStop,this),200),this.zoomIn(e*this.options.wheelSpeed),!1},_mouseWheelScroll:function(b,c,d,e){return this.enabled?(this._wheelTimeout===!1?this.startScroll():clearTimeout(this._wheelTimeout),this._wheelTimeout=setTimeout(a.proxy(this._wheelStop,this),200),this.scrollLeft(e*this.options.wheelSpeed),!1):!1},_wheelStop:function(){this.stopScroll(),this._wheelTimeout=!1},min:function(a){return this._leftHandle("value",a)},max:function(a){return this._rightHandle("value",a)},startScroll:function(){this._deactivateRange()},stopScroll:function(){this._reactivateRange(),this._triggerMouseEvent("stop"),this._leftHandle().trigger("stop"),this._rightHandle().trigger("stop")},scrollLeft:function(a){return a=a||1,0>a?this.scrollRight(-a):(a=this._leftHandle("moveLeft",a),this._rightHandle("moveLeft",a),this.update(),this._triggerMouseEvent("scroll"),void 0)},scrollRight:function(a){return a=a||1,0>a?this.scrollLeft(-a):(a=this._rightHandle("moveRight",a),this._leftHandle("moveRight",a),this.update(),this._triggerMouseEvent("scroll"),void 0)},zoomIn:function(a){if(a=a||1,0>a)return this.zoomOut(-a);var b=this._rightHandle("moveLeft",a);a>b&&(b/=2,this._rightHandle("moveRight",b)),this._leftHandle("moveRight",b),this.update(),this._triggerMouseEvent("zoom")},zoomOut:function(a){if(a=a||1,0>a)return this.zoomIn(-a);var b=this._rightHandle("moveRight",a);a>b&&(b/=2,this._rightHandle("moveLeft",b)),this._leftHandle("moveLeft",b),this.update(),this._triggerMouseEvent("zoom")},values:function(a,b){if("undefined"!=typeof a&&"undefined"!=typeof b){var c=Math.min(a,b),d=Math.max(a,b);this._deactivateRange(),this.options.leftHandle.unbind(".bar"),this.options.rightHandle.unbind(".bar"),this._values.min=this._leftHandle("value",c),this._values.max=this._rightHandle("value",d),this._bindHandles(),this._reactivateRange(),this.update()
-}return{min:this._values.min,max:this._values.max}},update:function(){this._values.min=this.min(),this._values.max=this.max(),this._cache(),this._positionBar()}})}(jQuery),function(a){function b(b,c,d,e){this.label1=b,this.label2=c,this.type=d,this.options=e,this.handle1=this.label1[this.type]("option","handle"),this.handle2=this.label2[this.type]("option","handle"),this.cache=null,this.left=b,this.right=c,this.moving=!1,this.initialized=!1,this.updating=!1,this.Init=function(){this.BindHandle(this.handle1),this.BindHandle(this.handle2),"show"===this.options.show?(setTimeout(a.proxy(this.PositionLabels,this),1),this.initialized=!0):setTimeout(a.proxy(this.AfterInit,this),1e3),this._resizeProxy=a.proxy(this.onWindowResize,this),a(window).resize(this._resizeProxy)},this.Destroy=function(){this._resizeProxy&&(a(window).unbind("resize",this._resizeProxy),this._resizeProxy=null,this.handle1.unbind(".positionner"),this.handle1=null,this.handle2.unbind(".positionner"),this.handle2=null,this.label1=null,this.label2=null,this.left=null,this.right=null),this.cache=null},this.AfterInit=function(){this.initialized=!0},this.Cache=function(){"none"!==this.label1.css("display")&&(this.cache={},this.cache.label1={},this.cache.label2={},this.cache.handle1={},this.cache.handle2={},this.cache.offsetParent={},this.CacheElement(this.label1,this.cache.label1),this.CacheElement(this.label2,this.cache.label2),this.CacheElement(this.handle1,this.cache.handle1),this.CacheElement(this.handle2,this.cache.handle2),this.CacheElement(this.label1.offsetParent(),this.cache.offsetParent))},this.CacheIfNecessary=function(){null===this.cache?this.Cache():(this.CacheWidth(this.label1,this.cache.label1),this.CacheWidth(this.label2,this.cache.label2),this.CacheHeight(this.label1,this.cache.label1),this.CacheHeight(this.label2,this.cache.label2),this.CacheWidth(this.label1.offsetParent(),this.cache.offsetParent))},this.CacheElement=function(a,b){this.CacheWidth(a,b),this.CacheHeight(a,b),b.offset=a.offset(),b.margin={left:this.ParsePixels("marginLeft",a),right:this.ParsePixels("marginRight",a)},b.border={left:this.ParsePixels("borderLeftWidth",a),right:this.ParsePixels("borderRightWidth",a)}},this.CacheWidth=function(a,b){b.width=a.width(),b.outerWidth=a.outerWidth()},this.CacheHeight=function(a,b){b.outerHeightMargin=a.outerHeight(!0)},this.ParsePixels=function(a,b){return parseInt(b.css(a),10)||0},this.BindHandle=function(b){b.bind("updating.positionner",a.proxy(this.onHandleUpdating,this)),b.bind("update.positionner",a.proxy(this.onHandleUpdated,this)),b.bind("moving.positionner",a.proxy(this.onHandleMoving,this)),b.bind("stop.positionner",a.proxy(this.onHandleStop,this))},this.PositionLabels=function(){if(this.CacheIfNecessary(),null!==this.cache){var a=this.GetRawPosition(this.cache.label1,this.cache.handle1),b=this.GetRawPosition(this.cache.label2,this.cache.handle2);this.label1[d]("option","isLeft")?this.ConstraintPositions(a,b):this.ConstraintPositions(b,a),this.PositionLabel(this.label1,a.left,this.cache.label1),this.PositionLabel(this.label2,b.left,this.cache.label2)}},this.PositionLabel=function(a,b,c){var d,e,f,g=this.cache.offsetParent.offset.left+this.cache.offsetParent.border.left;g-b>=0?(a.css("right",""),a.offset({left:b})):(d=g+this.cache.offsetParent.width,e=b+c.margin.left+c.outerWidth+c.margin.right,f=d-e,a.css("left",""),a.css("right",f))},this.ConstraintPositions=function(a,b){(a.center<b.center&&a.outerRight>b.outerLeft||a.center>b.center&&b.outerRight>a.outerLeft)&&(a=this.getLeftPosition(a,b),b=this.getRightPosition(a,b))},this.getLeftPosition=function(a,b){var c=(b.center+a.center)/2,d=c-a.cache.outerWidth-a.cache.margin.right+a.cache.border.left;return a.left=d,a},this.getRightPosition=function(a,b){var c=(b.center+a.center)/2;return b.left=c+b.cache.margin.left+b.cache.border.left,b},this.ShowIfNecessary=function(){"show"===this.options.show||this.moving||!this.initialized||this.updating||(this.label1.stop(!0,!0).fadeIn(this.options.durationIn||0),this.label2.stop(!0,!0).fadeIn(this.options.durationIn||0),this.moving=!0)},this.HideIfNeeded=function(){this.moving===!0&&(this.label1.stop(!0,!0).delay(this.options.delayOut||0).fadeOut(this.options.durationOut||0),this.label2.stop(!0,!0).delay(this.options.delayOut||0).fadeOut(this.options.durationOut||0),this.moving=!1)},this.onHandleMoving=function(a,b){this.ShowIfNecessary(),this.CacheIfNecessary(),this.UpdateHandlePosition(b),this.PositionLabels()},this.onHandleUpdating=function(){this.updating=!0},this.onHandleUpdated=function(){this.updating=!1,this.cache=null},this.onHandleStop=function(){this.HideIfNeeded()},this.onWindowResize=function(){this.cache=null},this.UpdateHandlePosition=function(a){null!==this.cache&&(a.element[0]===this.handle1[0]?this.UpdatePosition(a,this.cache.handle1):this.UpdatePosition(a,this.cache.handle2))},this.UpdatePosition=function(a,b){b.offset=a.offset,b.value=a.value},this.GetRawPosition=function(a,b){var c=b.offset.left+b.outerWidth/2,d=c-a.outerWidth/2,e=d+a.outerWidth-a.border.left-a.border.right,f=d-a.margin.left-a.border.left,g=b.offset.top-a.outerHeightMargin;return{left:d,outerLeft:f,top:g,right:e,outerRight:f+a.outerWidth+a.margin.left+a.margin.right,cache:a,center:c}},this.Init()}a.widget("ui.rangeSliderLabel",a.ui.rangeSliderMouseTouch,{options:{handle:null,formatter:!1,handleType:"rangeSliderHandle",show:"show",durationIn:0,durationOut:500,delayOut:500,isLeft:!1},cache:null,_positionner:null,_valueContainer:null,_innerElement:null,_value:null,_create:function(){this.options.isLeft=this._handle("option","isLeft"),this.element.addClass("ui-rangeSlider-label").css("position","absolute").css("display","block"),this._createElements(),this._toggleClass(),this.options.handle.bind("moving.label",a.proxy(this._onMoving,this)).bind("update.label",a.proxy(this._onUpdate,this)).bind("switch.label",a.proxy(this._onSwitch,this)),"show"!==this.options.show&&this.element.hide(),this._mouseInit()},destroy:function(){this.options.handle.unbind(".label"),this.options.handle=null,this._valueContainer=null,this._innerElement=null,this.element.empty(),this._positionner&&(this._positionner.Destroy(),this._positionner=null),a.ui.rangeSliderMouseTouch.prototype.destroy.apply(this)},_createElements:function(){this._valueContainer=a("<div class='ui-rangeSlider-label-value' />").appendTo(this.element),this._innerElement=a("<div class='ui-rangeSlider-label-inner' />").appendTo(this.element)},_handle:function(){var a=Array.prototype.slice.apply(arguments);return this.options.handle[this.options.handleType].apply(this.options.handle,a)},_setOption:function(a,b){"show"===a?this._updateShowOption(b):("durationIn"===a||"durationOut"===a||"delayOut"===a)&&this._updateDurations(a,b),this._setFormatterOption(a,b)},_setFormatterOption:function(a,b){"formatter"===a&&("function"==typeof b||b===!1)&&(this.options.formatter=b,this._display(this._value))},_updateShowOption:function(a){this.options.show=a,"show"!==this.options.show?(this.element.hide(),this._positionner.moving=!1):(this.element.show(),this._display(this.options.handle[this.options.handleType]("value")),this._positionner.PositionLabels()),this._positionner.options.show=this.options.show},_updateDurations:function(a,b){parseInt(b,10)===b&&(this._positionner.options[a]=b,this.options[a]=b)},_display:function(a){this.options.formatter===!1?this._displayText(Math.round(a)):this._displayText(this.options.formatter(a)),this._value=a},_displayText:function(a){this._valueContainer.text(a)},_toggleClass:function(){this.element.toggleClass("ui-rangeSlider-leftLabel",this.options.isLeft).toggleClass("ui-rangeSlider-rightLabel",!this.options.isLeft)},_positionLabels:function(){this._positionner.PositionLabels()},_mouseDown:function(a){this.options.handle.trigger(a)},_mouseUp:function(a){this.options.handle.trigger(a)},_mouseMove:function(a){this.options.handle.trigger(a)},_onMoving:function(a,b){this._display(b.value)},_onUpdate:function(){"show"===this.options.show&&this.update()},_onSwitch:function(a,b){this.options.isLeft=b,this._toggleClass(),this._positionLabels()},pair:function(a){null===this._positionner&&(this._positionner=new b(this.element,a,this.widgetName,{show:this.options.show,durationIn:this.options.durationIn,durationOut:this.options.durationOut,delayOut:this.options.delayOut}),a[this.widgetName]("positionner",this._positionner))},positionner:function(a){return"undefined"!=typeof a&&(this._positionner=a),this._positionner},update:function(){this._positionner.cache=null,this._display(this._handle("value")),"show"===this.options.show&&this._positionLabels()}})}(jQuery),function(a){a.widget("ui.dateRangeSlider",a.ui.rangeSlider,{options:{bounds:{min:new Date(2010,0,1).valueOf(),max:new Date(2012,0,1).valueOf()},defaultValues:{min:new Date(2010,1,11).valueOf(),max:new Date(2011,1,11).valueOf()}},_create:function(){a.ui.rangeSlider.prototype._create.apply(this),this.element.addClass("ui-dateRangeSlider")},destroy:function(){this.element.removeClass("ui-dateRangeSlider"),a.ui.rangeSlider.prototype.destroy.apply(this)},_setDefaultValues:function(){this._values={min:this.options.defaultValues.min.valueOf(),max:this.options.defaultValues.max.valueOf()}},_setRulerParameters:function(){this.ruler.ruler({min:new Date(this.options.bounds.min),max:new Date(this.options.bounds.max),scales:this.options.scales})},_setOption:function(b,c){("defaultValues"===b||"bounds"===b)&&"undefined"!=typeof c&&null!==c&&this._isValidDate(c.min)&&this._isValidDate(c.max)?a.ui.rangeSlider.prototype._setOption.apply(this,[b,{min:c.min.valueOf(),max:c.max.valueOf()}]):a.ui.rangeSlider.prototype._setOption.apply(this,this._toArray(arguments))},_handleType:function(){return"dateRangeSliderHandle"},option:function(b){if("bounds"===b||"defaultValues"===b){var c=a.ui.rangeSlider.prototype.option.apply(this,arguments);return{min:new Date(c.min),max:new Date(c.max)}}return a.ui.rangeSlider.prototype.option.apply(this,this._toArray(arguments))},_defaultFormatter:function(a){var b=a.getMonth()+1,c=a.getDate();return""+a.getFullYear()+"-"+(10>b?"0"+b:b)+"-"+(10>c?"0"+c:c)},_getFormatter:function(){var a=this.options.formatter;return(this.options.formatter===!1||null===this.options.formatter)&&(a=this._defaultFormatter),function(a){return function(b){return a(new Date(b))}}(a)},values:function(b,c){var d=null;return d=this._isValidDate(b)&&this._isValidDate(c)?a.ui.rangeSlider.prototype.values.apply(this,[b.valueOf(),c.valueOf()]):a.ui.rangeSlider.prototype.values.apply(this,this._toArray(arguments)),{min:new Date(d.min),max:new Date(d.max)}},min:function(b){return this._isValidDate(b)?new Date(a.ui.rangeSlider.prototype.min.apply(this,[b.valueOf()])):new Date(a.ui.rangeSlider.prototype.min.apply(this))},max:function(b){return this._isValidDate(b)?new Date(a.ui.rangeSlider.prototype.max.apply(this,[b.valueOf()])):new Date(a.ui.rangeSlider.prototype.max.apply(this))},bounds:function(b,c){var d;return d=this._isValidDate(b)&&this._isValidDate(c)?a.ui.rangeSlider.prototype.bounds.apply(this,[b.valueOf(),c.valueOf()]):a.ui.rangeSlider.prototype.bounds.apply(this,this._toArray(arguments)),{min:new Date(d.min),max:new Date(d.max)}},_isValidDate:function(a){return"undefined"!=typeof a&&a instanceof Date},_toArray:function(a){return Array.prototype.slice.call(a)}})}(jQuery),function(a){a.widget("ui.dateRangeSliderHandle",a.ui.rangeSliderHandle,{_steps:!1,_boundsValues:{},_create:function(){this._createBoundsValues(),a.ui.rangeSliderHandle.prototype._create.apply(this)},_getValueForPosition:function(a){var b=this._getRawValueForPositionAndBounds(a,this.options.bounds.min.valueOf(),this.options.bounds.max.valueOf());return this._constraintValue(new Date(b))},_setOption:function(b,c){return"step"===b?(this.options.step=c,this._createSteps(),this.update(),void 0):(a.ui.rangeSliderHandle.prototype._setOption.apply(this,[b,c]),"bounds"===b&&this._createBoundsValues(),void 0)},_createBoundsValues:function(){this._boundsValues={min:this.options.bounds.min.valueOf(),max:this.options.bounds.max.valueOf()}},_bounds:function(){return this._boundsValues},_createSteps:function(){if(this.options.step===!1||!this._isValidStep())return this._steps=!1,void 0;var a=new Date(this.options.bounds.min),b=new Date(this.options.bounds.max),c=a,d=0,e=new Date;for(this._steps=[];b>=c&&(1===d||e.valueOf()!==c.valueOf());)e=c,this._steps.push(c.valueOf()),c=this._addStep(a,d,this.options.step),d++;e.valueOf()===c.valueOf()&&(this._steps=!1)},_isValidStep:function(){return"object"==typeof this.options.step},_addStep:function(a,b,c){var d=new Date(a.valueOf());return d=this._addThing(d,"FullYear",b,c.years),d=this._addThing(d,"Month",b,c.months),d=this._addThing(d,"Date",b,7*c.weeks),d=this._addThing(d,"Date",b,c.days),d=this._addThing(d,"Hours",b,c.hours),d=this._addThing(d,"Minutes",b,c.minutes),d=this._addThing(d,"Seconds",b,c.seconds)},_addThing:function(a,b,c,d){return 0===c||0===(d||0)?a:(a["set"+b](a["get"+b]()+c*(d||0)),a)},_round:function(a){if(this._steps===!1)return a;for(var b,c,d=this.options.bounds.max.valueOf(),e=this.options.bounds.min.valueOf(),f=Math.max(0,(a-e)/(d-e)),g=Math.floor(this._steps.length*f);this._steps[g]>a;)g--;for(;g+1<this._steps.length&&this._steps[g+1]<=a;)g++;return g>=this._steps.length-1?this._steps[this._steps.length-1]:0===g?this._steps[0]:(b=this._steps[g],c=this._steps[g+1],c-a>a-b?b:c)},update:function(){this._createBoundsValues(),this._createSteps(),a.ui.rangeSliderHandle.prototype.update.apply(this)},add:function(a,b){return this._addStep(new Date(a),1,b).valueOf()},substract:function(a,b){return this._addStep(new Date(a),-1,b).valueOf()},stepsBetween:function(a,b){if(this.options.step===!1)return b-a;var c=Math.min(a,b),d=Math.max(a,b),e=0,f=!1,g=a>b;for(this.add(c,this.options.step)-c<0&&(f=!0);d>c;)f?d=this.add(d,this.options.step):c=this.add(c,this.options.step),e++;return g?-e:e},multiplyStep:function(a,b){var c={};for(var d in a)a.hasOwnProperty(d)&&(c[d]=a[d]*b);return c},stepRatio:function(){if(this.options.step===!1)return 1;var a=this._steps.length;return this.cache.parent.width/a}})}(jQuery),function(a){a.widget("ui.editRangeSlider",a.ui.rangeSlider,{options:{type:"text",round:1},_create:function(){a.ui.rangeSlider.prototype._create.apply(this),this.element.addClass("ui-editRangeSlider")},destroy:function(){this.element.removeClass("ui-editRangeSlider"),a.ui.rangeSlider.prototype.destroy.apply(this)},_setOption:function(b,c){("type"===b||"step"===b)&&this._setLabelOption(b,c),"type"===b&&(this.options[b]=null===this.labels.left?c:this._leftLabel("option",b)),a.ui.rangeSlider.prototype._setOption.apply(this,[b,c])},_setLabelOption:function(a,b){null!==this.labels.left&&(this._leftLabel("option",a,b),this._rightLabel("option",a,b))},_labelType:function(){return"editRangeSliderLabel"},_createLabel:function(b,c){var d=a.ui.rangeSlider.prototype._createLabel.apply(this,[b,c]);return null===b&&d.bind("valueChange",a.proxy(this._onValueChange,this)),d},_addPropertiesToParameter:function(a){return a.type=this.options.type,a.step=this.options.step,a.id=this.element.attr("id"),a},_getLabelConstructorParameters:function(b,c){var d=a.ui.rangeSlider.prototype._getLabelConstructorParameters.apply(this,[b,c]);return this._addPropertiesToParameter(d)},_getLabelRefreshParameters:function(b,c){var d=a.ui.rangeSlider.prototype._getLabelRefreshParameters.apply(this,[b,c]);return this._addPropertiesToParameter(d)},_onValueChange:function(a,b){var c=!1;c=b.isLeft?this._values.min!==this.min(b.value):this._values.max!==this.max(b.value),c&&this._trigger("userValuesChanged")}})}(jQuery),function(a){a.widget("ui.editRangeSliderLabel",a.ui.rangeSliderLabel,{options:{type:"text",step:!1,id:""},_input:null,_text:"",_create:function(){a.ui.rangeSliderLabel.prototype._create.apply(this),this._createInput()},_setOption:function(b,c){"type"===b?this._setTypeOption(c):"step"===b&&this._setStepOption(c),a.ui.rangeSliderLabel.prototype._setOption.apply(this,[b,c])},_createInput:function(){this._input=a("<input type='"+this.options.type+"' />").addClass("ui-editRangeSlider-inputValue").appendTo(this._valueContainer),this._setInputName(),this._input.bind("keyup",a.proxy(this._onKeyUp,this)),this._input.blur(a.proxy(this._onChange,this)),"number"===this.options.type&&(this.options.step!==!1&&this._input.attr("step",this.options.step),this._input.click(a.proxy(this._onChange,this))),this._input.val(this._text)},_setInputName:function(){var a=this.options.isLeft?"left":"right";this._input.attr("name",this.options.id+a)},_onSwitch:function(b,c){a.ui.rangeSliderLabel.prototype._onSwitch.apply(this,[b,c]),this._setInputName()},_destroyInput:function(){this._input.remove(),this._input=null},_onKeyUp:function(a){return 13===a.which?(this._onChange(a),!1):void 0},_onChange:function(){var a=this._returnCheckedValue(this._input.val());a!==!1&&this._triggerValue(a)},_triggerValue:function(a){var b=this.options.handle[this.options.handleType]("option","isLeft");this.element.trigger("valueChange",[{isLeft:b,value:a}])},_returnCheckedValue:function(a){var b=parseFloat(a);return isNaN(b)||isNaN(Number(a))?!1:b},_setTypeOption:function(a){"text"!==a&&"number"!==a||this.options.type===a||(this._destroyInput(),this.options.type=a,this._createInput())},_setStepOption:function(a){this.options.step=a,"number"===this.options.type&&this._input.attr("step",a!==!1?a:"any")},_displayText:function(a){this._input.val(a),this._text=a},enable:function(){a.ui.rangeSliderLabel.prototype.enable.apply(this),this._input.attr("disabled",null)},disable:function(){a.ui.rangeSliderLabel.prototype.disable.apply(this),this._input.attr("disabled","disabled")}})}(jQuery),function(a){var b={first:function(a){return a},next:function(a){return a+1},format:function(){},label:function(a){return Math.round(a)},stop:function(){return!1}};a.widget("ui.ruler",{options:{min:0,max:100,scales:[]},_create:function(){this.element.addClass("ui-ruler"),this._createScales()},destroy:function(){this.element.removeClass("ui-ruler"),this.element.empty()},_regenerate:function(){this.element.empty(),this._createScales()},_setOption:function(a,b){return"min"===a||"max"===a&&b!==this.options[a]?(this.options[a]=b,this._regenerate(),void 0):"scales"===a&&b instanceof Array?(this.options.scales=b,this._regenerate(),void 0):void 0},_createScales:function(){if(this.options.max!==this.options.min)for(var a=0;a<this.options.scales.length;a++)this._createScale(this.options.scales[a],a)},_createScale:function(c,d){var e=a.extend({},b,c),f=a("<div class='ui-ruler-scale' />").appendTo(this.element);f.addClass("ui-ruler-scale"+d),this._createTicks(f,e)},_createTicks:function(a,b){var c,d,e,f=b.first(this.options.min,this.options.max),g=this.options.max-this.options.min,h=!0;do c=f,f=b.next(c),d=(Math.min(f,this.options.max)-Math.max(c,this.options.min))/g,e=this._createTick(c,f,b),a.append(e),e.css("width",100*d+"%"),h&&c>this.options.min&&e.css("margin-left",100*(c-this.options.min)/g+"%"),h=!1;while(!this._stop(b,f))},_stop:function(a,b){return a.stop(b)||b>=this.options.max},_createTick:function(b,c,d){var e=a("<div class='ui-ruler-tick' style='display:inline-block' />"),f=a("<div class='ui-ruler-tick-inner' />").appendTo(e),g=a("<span class='ui-ruler-tick-label' />").appendTo(f);return g.text(d.label(b,c)),d.format(e,b,c),e}})}(jQuery);
-return $.fn.rangeSlider;
-  }).apply(root, arguments);
-});
+}return{min:this._values.min,max:this._values.max}},update:function(){this._values.min=this.min(),this._values.max=this.max(),this._cache(),this._positionBar()}})}(jQuery),function(a){function b(b,c,d,e){this.label1=b,this.label2=c,this.type=d,this.options=e,this.handle1=this.label1[this.type]("option","handle"),this.handle2=this.label2[this.type]("option","handle"),this.cache=null,this.left=b,this.right=c,this.moving=!1,this.initialized=!1,this.updating=!1,this.Init=function(){this.BindHandle(this.handle1),this.BindHandle(this.handle2),"show"===this.options.show?(setTimeout(a.proxy(this.PositionLabels,this),1),this.initialized=!0):setTimeout(a.proxy(this.AfterInit,this),1e3),this._resizeProxy=a.proxy(this.onWindowResize,this),a(window).resize(this._resizeProxy)},this.Destroy=function(){this._resizeProxy&&(a(window).unbind("resize",this._resizeProxy),this._resizeProxy=null,this.handle1.unbind(".positionner"),this.handle1=null,this.handle2.unbind(".positionner"),this.handle2=null,this.label1=null,this.label2=null,this.left=null,this.right=null),this.cache=null},this.AfterInit=function(){this.initialized=!0},this.Cache=function(){"none"!==this.label1.css("display")&&(this.cache={},this.cache.label1={},this.cache.label2={},this.cache.handle1={},this.cache.handle2={},this.cache.offsetParent={},this.CacheElement(this.label1,this.cache.label1),this.CacheElement(this.label2,this.cache.label2),this.CacheElement(this.handle1,this.cache.handle1),this.CacheElement(this.handle2,this.cache.handle2),this.CacheElement(this.label1.offsetParent(),this.cache.offsetParent))},this.CacheIfNecessary=function(){null===this.cache?this.Cache():(this.CacheWidth(this.label1,this.cache.label1),this.CacheWidth(this.label2,this.cache.label2),this.CacheHeight(this.label1,this.cache.label1),this.CacheHeight(this.label2,this.cache.label2),this.CacheWidth(this.label1.offsetParent(),this.cache.offsetParent))},this.CacheElement=function(a,b){this.CacheWidth(a,b),this.CacheHeight(a,b),b.offset=a.offset(),b.margin={left:this.ParsePixels("marginLeft",a),right:this.ParsePixels("marginRight",a)},b.border={left:this.ParsePixels("borderLeftWidth",a),right:this.ParsePixels("borderRightWidth",a)}},this.CacheWidth=function(a,b){b.width=a.width(),b.outerWidth=a.outerWidth()},this.CacheHeight=function(a,b){b.outerHeightMargin=a.outerHeight(!0)},this.ParsePixels=function(a,b){return parseInt(b.css(a),10)||0},this.BindHandle=function(b){b.bind("updating.positionner",a.proxy(this.onHandleUpdating,this)),b.bind("update.positionner",a.proxy(this.onHandleUpdated,this)),b.bind("moving.positionner",a.proxy(this.onHandleMoving,this)),b.bind("stop.positionner",a.proxy(this.onHandleStop,this))},this.PositionLabels=function(){if(this.CacheIfNecessary(),null!==this.cache){var a=this.GetRawPosition(this.cache.label1,this.cache.handle1),b=this.GetRawPosition(this.cache.label2,this.cache.handle2);this.label1[d]("option","isLeft")?this.ConstraintPositions(a,b):this.ConstraintPositions(b,a),this.PositionLabel(this.label1,a.left,this.cache.label1),this.PositionLabel(this.label2,b.left,this.cache.label2)}},this.PositionLabel=function(a,b,c){var d,e,f,g=this.cache.offsetParent.offset.left+this.cache.offsetParent.border.left;g-b>=0?(a.css("right",""),a.offset({left:b})):(d=g+this.cache.offsetParent.width,e=b+c.margin.left+c.outerWidth+c.margin.right,f=d-e,a.css("left",""),a.css("right",f))},this.ConstraintPositions=function(a,b){(a.center<b.center&&a.outerRight>b.outerLeft||a.center>b.center&&b.outerRight>a.outerLeft)&&(a=this.getLeftPosition(a,b),b=this.getRightPosition(a,b))},this.getLeftPosition=function(a,b){var c=(b.center+a.center)/2,d=c-a.cache.outerWidth-a.cache.margin.right+a.cache.border.left;return a.left=d,a},this.getRightPosition=function(a,b){var c=(b.center+a.center)/2;return b.left=c+b.cache.margin.left+b.cache.border.left,b},this.ShowIfNecessary=function(){"show"===this.options.show||this.moving||!this.initialized||this.updating||(this.label1.stop(!0,!0).fadeIn(this.options.durationIn||0),this.label2.stop(!0,!0).fadeIn(this.options.durationIn||0),this.moving=!0)},this.HideIfNeeded=function(){this.moving===!0&&(this.label1.stop(!0,!0).delay(this.options.delayOut||0).fadeOut(this.options.durationOut||0),this.label2.stop(!0,!0).delay(this.options.delayOut||0).fadeOut(this.options.durationOut||0),this.moving=!1)},this.onHandleMoving=function(a,b){this.ShowIfNecessary(),this.CacheIfNecessary(),this.UpdateHandlePosition(b),this.PositionLabels()},this.onHandleUpdating=function(){this.updating=!0},this.onHandleUpdated=function(){this.updating=!1,this.cache=null},this.onHandleStop=function(){this.HideIfNeeded()},this.onWindowResize=function(){this.cache=null},this.UpdateHandlePosition=function(a){null!==this.cache&&(a.element[0]===this.handle1[0]?this.UpdatePosition(a,this.cache.handle1):this.UpdatePosition(a,this.cache.handle2))},this.UpdatePosition=function(a,b){b.offset=a.offset,b.value=a.value},this.GetRawPosition=function(a,b){var c=b.offset.left+b.outerWidth/2,d=c-a.outerWidth/2,e=d+a.outerWidth-a.border.left-a.border.right,f=d-a.margin.left-a.border.left,g=b.offset.top-a.outerHeightMargin;return{left:d,outerLeft:f,top:g,right:e,outerRight:f+a.outerWidth+a.margin.left+a.margin.right,cache:a,center:c}},this.Init()}a.widget("ui.rangeSliderLabel",a.ui.rangeSliderMouseTouch,{options:{handle:null,formatter:!1,handleType:"rangeSliderHandle",show:"show",durationIn:0,durationOut:500,delayOut:500,isLeft:!1},cache:null,_positionner:null,_valueContainer:null,_innerElement:null,_value:null,_create:function(){this.options.isLeft=this._handle("option","isLeft"),this.element.addClass("ui-rangeSlider-label").css("position","absolute").css("display","block"),this._createElements(),this._toggleClass(),this.options.handle.bind("moving.label",a.proxy(this._onMoving,this)).bind("update.label",a.proxy(this._onUpdate,this)).bind("switch.label",a.proxy(this._onSwitch,this)),"show"!==this.options.show&&this.element.hide(),this._mouseInit()},destroy:function(){this.options.handle.unbind(".label"),this.options.handle=null,this._valueContainer=null,this._innerElement=null,this.element.empty(),this._positionner&&(this._positionner.Destroy(),this._positionner=null),a.ui.rangeSliderMouseTouch.prototype.destroy.apply(this)},_createElements:function(){this._valueContainer=a("<div class='ui-rangeSlider-label-value' />").appendTo(this.element),this._innerElement=a("<div class='ui-rangeSlider-label-inner' />").appendTo(this.element)},_handle:function(){var a=Array.prototype.slice.apply(arguments);return this.options.handle[this.options.handleType].apply(this.options.handle,a)},_setOption:function(a,b){"show"===a?this._updateShowOption(b):("durationIn"===a||"durationOut"===a||"delayOut"===a)&&this._updateDurations(a,b),this._setFormatterOption(a,b)},_setFormatterOption:function(a,b){"formatter"===a&&("function"==typeof b||b===!1)&&(this.options.formatter=b,this._display(this._value))},_updateShowOption:function(a){this.options.show=a,"show"!==this.options.show?(this.element.hide(),this._positionner.moving=!1):(this.element.show(),this._display(this.options.handle[this.options.handleType]("value")),this._positionner.PositionLabels()),this._positionner.options.show=this.options.show},_updateDurations:function(a,b){parseInt(b,10)===b&&(this._positionner.options[a]=b,this.options[a]=b)},_display:function(a){this.options.formatter===!1?this._displayText(Math.round(a)):this._displayText(this.options.formatter(a)),this._value=a},_displayText:function(a){this._valueContainer.text(a)},_toggleClass:function(){this.element.toggleClass("ui-rangeSlider-leftLabel",this.options.isLeft).toggleClass("ui-rangeSlider-rightLabel",!this.options.isLeft)},_positionLabels:function(){this._positionner.PositionLabels()},_mouseDown:function(a){this.options.handle.trigger(a)},_mouseUp:function(a){this.options.handle.trigger(a)},_mouseMove:function(a){this.options.handle.trigger(a)},_onMoving:function(a,b){this._display(b.value)},_onUpdate:function(){"show"===this.options.show&&this.update()},_onSwitch:function(a,b){this.options.isLeft=b,this._toggleClass(),this._positionLabels()},pair:function(a){null===this._positionner&&(this._positionner=new b(this.element,a,this.widgetName,{show:this.options.show,durationIn:this.options.durationIn,durationOut:this.options.durationOut,delayOut:this.options.delayOut}),a[this.widgetName]("positionner",this._positionner))},positionner:function(a){return"undefined"!=typeof a&&(this._positionner=a),this._positionner},update:function(){this._positionner.cache=null,this._display(this._handle("value")),"show"===this.options.show&&this._positionLabels()}})}(jQuery),function(a){a.widget("ui.dateRangeSlider",a.ui.rangeSlider,{options:{bounds:{min:new Date(2010,0,1).valueOf(),max:new Date(2012,0,1).valueOf()},defaultValues:{min:new Date(2010,1,11).valueOf(),max:new Date(2011,1,11).valueOf()}},_create:function(){a.ui.rangeSlider.prototype._create.apply(this),this.element.addClass("ui-dateRangeSlider")},destroy:function(){this.element.removeClass("ui-dateRangeSlider"),a.ui.rangeSlider.prototype.destroy.apply(this)},_setDefaultValues:function(){this._values={min:this.options.defaultValues.min.valueOf(),max:this.options.defaultValues.max.valueOf()}},_setRulerParameters:function(){this.ruler.ruler({min:new Date(this.options.bounds.min),max:new Date(this.options.bounds.max),scales:this.options.scales})},_setOption:function(b,c){("defaultValues"===b||"bounds"===b)&&"undefined"!=typeof c&&null!==c&&this._isValidDate(c.min)&&this._isValidDate(c.max)?a.ui.rangeSlider.prototype._setOption.apply(this,[b,{min:c.min.valueOf(),max:c.max.valueOf()}]):a.ui.rangeSlider.prototype._setOption.apply(this,this._toArray(arguments))},_handleType:function(){return"dateRangeSliderHandle"},option:function(b){if("bounds"===b||"defaultValues"===b){var c=a.ui.rangeSlider.prototype.option.apply(this,arguments);return{min:new Date(c.min),max:new Date(c.max)}}return a.ui.rangeSlider.prototype.option.apply(this,this._toArray(arguments))},_defaultFormatter:function(a){var b=a.getMonth()+1,c=a.getDate();return""+a.getFullYear()+"-"+(10>b?"0"+b:b)+"-"+(10>c?"0"+c:c)},_getFormatter:function(){var a=this.options.formatter;return(this.options.formatter===!1||null===this.options.formatter)&&(a=this._defaultFormatter),function(a){return function(b){return a(new Date(b))}}(a)},values:function(b,c){var d=null;return d=this._isValidDate(b)&&this._isValidDate(c)?a.ui.rangeSlider.prototype.values.apply(this,[b.valueOf(),c.valueOf()]):a.ui.rangeSlider.prototype.values.apply(this,this._toArray(arguments)),{min:new Date(d.min),max:new Date(d.max)}},min:function(b){return this._isValidDate(b)?new Date(a.ui.rangeSlider.prototype.min.apply(this,[b.valueOf()])):new Date(a.ui.rangeSlider.prototype.min.apply(this))},max:function(b){return this._isValidDate(b)?new Date(a.ui.rangeSlider.prototype.max.apply(this,[b.valueOf()])):new Date(a.ui.rangeSlider.prototype.max.apply(this))},bounds:function(b,c){var d;return d=this._isValidDate(b)&&this._isValidDate(c)?a.ui.rangeSlider.prototype.bounds.apply(this,[b.valueOf(),c.valueOf()]):a.ui.rangeSlider.prototype.bounds.apply(this,this._toArray(arguments)),{min:new Date(d.min),max:new Date(d.max)}},_isValidDate:function(a){return"undefined"!=typeof a&&a instanceof Date},_toArray:function(a){return Array.prototype.slice.call(a)}})}(jQuery),function(a){a.widget("ui.dateRangeSliderHandle",a.ui.rangeSliderHandle,{_steps:!1,_boundsValues:{},_create:function(){this._createBoundsValues(),a.ui.rangeSliderHandle.prototype._create.apply(this)},_getValueForPosition:function(a){var b=this._getRawValueForPositionAndBounds(a,this.options.bounds.min.valueOf(),this.options.bounds.max.valueOf());return this._constraintValue(new Date(b))},_setOption:function(b,c){return"step"===b?(this.options.step=c,this._createSteps(),this.update(),void 0):(a.ui.rangeSliderHandle.prototype._setOption.apply(this,[b,c]),"bounds"===b&&this._createBoundsValues(),void 0)},_createBoundsValues:function(){this._boundsValues={min:this.options.bounds.min.valueOf(),max:this.options.bounds.max.valueOf()}},_bounds:function(){return this._boundsValues},_createSteps:function(){if(this.options.step===!1||!this._isValidStep())return this._steps=!1,void 0;var a=new Date(this.options.bounds.min),b=new Date(this.options.bounds.max),c=a,d=0,e=new Date;for(this._steps=[];b>=c&&(1===d||e.valueOf()!==c.valueOf());)e=c,this._steps.push(c.valueOf()),c=this._addStep(a,d,this.options.step),d++;e.valueOf()===c.valueOf()&&(this._steps=!1)},_isValidStep:function(){return"object"==typeof this.options.step},_addStep:function(a,b,c){var d=new Date(a.valueOf());return d=this._addThing(d,"FullYear",b,c.years),d=this._addThing(d,"Month",b,c.months),d=this._addThing(d,"Date",b,7*c.weeks),d=this._addThing(d,"Date",b,c.days),d=this._addThing(d,"Hours",b,c.hours),d=this._addThing(d,"Minutes",b,c.minutes),d=this._addThing(d,"Seconds",b,c.seconds)},_addThing:function(a,b,c,d){return 0===c||0===(d||0)?a:(a["set"+b](a["get"+b]()+c*(d||0)),a)},_round:function(a){if(this._steps===!1)return a;for(var b,c,d=this.options.bounds.max.valueOf(),e=this.options.bounds.min.valueOf(),f=Math.max(0,(a-e)/(d-e)),g=Math.floor(this._steps.length*f);this._steps[g]>a;)g--;for(;g+1<this._steps.length&&this._steps[g+1]<=a;)g++;return g>=this._steps.length-1?this._steps[this._steps.length-1]:0===g?this._steps[0]:(b=this._steps[g],c=this._steps[g+1],c-a>a-b?b:c)},update:function(){this._createBoundsValues(),this._createSteps(),a.ui.rangeSliderHandle.prototype.update.apply(this)},add:function(a,b){return this._addStep(new Date(a),1,b).valueOf()},substract:function(a,b){return this._addStep(new Date(a),-1,b).valueOf()},stepsBetween:function(a,b){if(this.options.step===!1)return b-a;var c=Math.min(a,b),d=Math.max(a,b),e=0,f=!1,g=a>b;for(this.add(c,this.options.step)-c<0&&(f=!0);d>c;)f?d=this.add(d,this.options.step):c=this.add(c,this.options.step),e++;return g?-e:e},multiplyStep:function(a,b){var c={};for(var d in a)a.hasOwnProperty(d)&&(c[d]=a[d]*b);return c},stepRatio:function(){if(this.options.step===!1)return 1;var a=this._steps.length;return this.cache.parent.width/a}})}(jQuery),function(a){a.widget("ui.editRangeSlider",a.ui.rangeSlider,{options:{type:"text",round:1},_create:function(){a.ui.rangeSlider.prototype._create.apply(this),this.element.addClass("ui-editRangeSlider")},destroy:function(){this.element.removeClass("ui-editRangeSlider"),a.ui.rangeSlider.prototype.destroy.apply(this)},_setOption:function(b,c){("type"===b||"step"===b)&&this._setLabelOption(b,c),"type"===b&&(this.options[b]=null===this.labels.left?c:this._leftLabel("option",b)),a.ui.rangeSlider.prototype._setOption.apply(this,[b,c])},_setLabelOption:function(a,b){null!==this.labels.left&&(this._leftLabel("option",a,b),this._rightLabel("option",a,b))},_labelType:function(){return"editRangeSliderLabel"},_createLabel:function(b,c){var d=a.ui.rangeSlider.prototype._createLabel.apply(this,[b,c]);return null===b&&d.bind("valueChange",a.proxy(this._onValueChange,this)),d},_addPropertiesToParameter:function(a){return a.type=this.options.type,a.step=this.options.step,a.id=this.element.attr("id"),a},_getLabelConstructorParameters:function(b,c){var d=a.ui.rangeSlider.prototype._getLabelConstructorParameters.apply(this,[b,c]);return this._addPropertiesToParameter(d)},_getLabelRefreshParameters:function(b,c){var d=a.ui.rangeSlider.prototype._getLabelRefreshParameters.apply(this,[b,c]);return this._addPropertiesToParameter(d)},_onValueChange:function(a,b){var c=!1;c=b.isLeft?this._values.min!==this.min(b.value):this._values.max!==this.max(b.value),c&&this._trigger("userValuesChanged")}})}(jQuery),function(a){a.widget("ui.editRangeSliderLabel",a.ui.rangeSliderLabel,{options:{type:"text",step:!1,id:""},_input:null,_text:"",_create:function(){a.ui.rangeSliderLabel.prototype._create.apply(this),this._createInput()},_setOption:function(b,c){"type"===b?this._setTypeOption(c):"step"===b&&this._setStepOption(c),a.ui.rangeSliderLabel.prototype._setOption.apply(this,[b,c])},_createInput:function(){this._input=a("<input type='"+this.options.type+"' />").addClass("ui-editRangeSlider-inputValue").appendTo(this._valueContainer),this._setInputName(),this._input.bind("keyup",a.proxy(this._onKeyUp,this)),this._input.blur(a.proxy(this._onChange,this)),"number"===this.options.type&&(this.options.step!==!1&&this._input.attr("step",this.options.step),this._input.click(a.proxy(this._onChange,this))),this._input.val(this._text)},_setInputName:function(){var a=this.options.isLeft?"left":"right";this._input.attr("name",this.options.id+a)},_onSwitch:function(b,c){a.ui.rangeSliderLabel.prototype._onSwitch.apply(this,[b,c]),this._setInputName()},_destroyInput:function(){this._input.remove(),this._input=null},_onKeyUp:function(a){return 13===a.which?(this._onChange(a),!1):void 0},_onChange:function(){var a=this._returnCheckedValue(this._input.val());a!==!1&&this._triggerValue(a)},_triggerValue:function(a){var b=this.options.handle[this.options.handleType]("option","isLeft");this.element.trigger("valueChange",[{isLeft:b,value:a}])},_returnCheckedValue:function(a){var b=parseFloat(a);return isNaN(b)||isNaN(Number(a))?!1:b},_setTypeOption:function(a){"text"!==a&&"number"!==a||this.options.type===a||(this._destroyInput(),this.options.type=a,this._createInput())},_setStepOption:function(a){this.options.step=a,"number"===this.options.type&&this._input.attr("step",a!==!1?a:"any")},_displayText:function(a){this._input.val(a),this._text=a},enable:function(){a.ui.rangeSliderLabel.prototype.enable.apply(this),this._input.attr("disabled",null)},disable:function(){a.ui.rangeSliderLabel.prototype.disable.apply(this),this._input.attr("disabled","disabled")}})}(jQuery),function(a){var b={first:function(a){return a},next:function(a){return a+1},format:function(){},label:function(a){return Math.round(a)},stop:function(){return!1}};a.widget("ui.ruler",{options:{min:0,max:100,scales:[]},_create:function(){this.element.addClass("ui-ruler"),this._createScales()},destroy:function(){this.element.removeClass("ui-ruler"),this.element.empty()},_regenerate:function(){this.element.empty(),this._createScales()},_setOption:function(a,b){return"min"===a||"max"===a&&b!==this.options[a]?(this.options[a]=b,this._regenerate(),void 0):"scales"===a&&b instanceof Array?(this.options.scales=b,this._regenerate(),void 0):void 0},_createScales:function(){if(this.options.max!==this.options.min)for(var a=0;a<this.options.scales.length;a++)this._createScale(this.options.scales[a],a)},_createScale:function(c,d){var e=a.extend({},b,c),f=a("<div class='ui-ruler-scale' />").appendTo(this.element);f.addClass("ui-ruler-scale"+d),this._createTicks(f,e)},_createTicks:function(a,b){var c,d,e,f=b.first(this.options.min,this.options.max),g=this.options.max-this.options.min,h=!0;do c=f,f=b.next(c),d=(Math.min(f,this.options.max)-Math.max(c,this.options.min))/g,e=this._createTick(c,f,b),a.append(e),e.css("width",100*d+"%"),h&&c>this.options.min&&e.css("margin-left",100*(c-this.options.min)/g+"%"),h=!1;while(!this._stop(b,f))},_stop:function(a,b){return a.stop(b)||b>=this.options.max},_createTick:function(b,c,d){var e=a("<div class='ui-ruler-tick' style='display:inline-block' />"),f=a("<div class='ui-ruler-tick-inner' />").appendTo(e),g=a("<span class='ui-ruler-tick-label' />").appendTo(f);return g.text(d.label(b,c)),d.format(e,b,c),e}})}(jQuery);return $.fn.rangeSlider;      }).apply(root, arguments);
+    });
 }(this));
 
 (function() {
@@ -62643,7 +63165,81 @@ define('widget/dialog_template',[],function(){
 //@ sourceMappingURL=seq.js.map
 */;
 (function() {
-  define('common/base',["underscore", "require", "common/custom", "common/gmap_plot", "common/grid_plot", "common/plot", "common/plot_context", "mapper/1d/categorical_mapper", "mapper/1d/linear_mapper", "mapper/2d/grid_mapper", "mapper/color/linear_color_mapper", "range/data_factor_range", "range/data_range1d", "range/factor_range", "range/range1d", "renderer/annotation/legend", "renderer/glyph/glyph_factory", "renderer/guide/categorical_axis", "renderer/guide/datetime_axis", "renderer/guide/grid", "renderer/guide/linear_axis", "renderer/overlay/box_selection", "source/column_data_source", "source/server_data_source", "ticking/abstract_ticker", "ticking/adaptive_ticker", "ticking/basic_tick_formatter", "ticking/basic_ticker", "ticking/categorical_tick_formatter", "ticking/categorical_ticker", "ticking/composite_ticker", "ticking/datetime_tick_formatter", "ticking/datetime_ticker", "ticking/days_ticker", "ticking/months_ticker", "ticking/single_interval_ticker", "ticking/years_ticker", "tool/box_select_tool", "tool/box_zoom_tool", "tool/click_tool", "tool/crosshair_tool", "tool/data_range_box_select_tool", "tool/embed_tool", "tool/hover_tool", "tool/pan_tool", "tool/preview_save_tool", "tool/reset_tool", "tool/resize_tool", "tool/wheel_zoom_tool", "tool/object_explorer_tool", "widget/data_slider", "widget/data_table", "widget/handson_table", "widget/table_column", "widget/pivot_table", "widget/object_explorer", "widget/pandas/ipython_remote_data", "widget/pandas/pandas_pivot_table", "widget/pandas/pandas_plot_source", 'widget/paragraph', 'widget/hbox', 'widget/vbox', 'widget/textinput', 'widget/vboxmodelform', 'widget/pretext', 'widget/selectbox', 'widget/slider', 'widget/crossfilter', 'widget/volumeslicer/volumeslicer', 'widget/multiselect', 'widget/date_range_slider', 'widget/date_picker', 'widget/panel', 'widget/tabs', 'widget/dialog', 'transforms/const', 'transforms/count', 'transforms/cuberoot', 'transforms/id', 'transforms/interpolate', 'transforms/seq'], function(_, require) {
+  var __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  define('transforms/spread',["common/continuum_view", "backbone", "common/has_parent"], function(continuum_view, Backbone, HasParent) {
+    var Spread, SpreadView, Spreads, _ref, _ref1, _ref2;
+    SpreadView = (function(_super) {
+      __extends(SpreadView, _super);
+
+      function SpreadView() {
+        _ref = SpreadView.__super__.constructor.apply(this, arguments);
+        return _ref;
+      }
+
+      SpreadView.prototype.attributes = {
+        "class": "SpreadView"
+      };
+
+      SpreadView.prototype.initialize = function(options) {
+        SpreadView.__super__.initialize.call(this, options);
+        return this.render_init();
+      };
+
+      SpreadView.prototype.delegateEvents = function(events) {
+        SpreadView.__super__.delegateEvents.call(this, events);
+        return "pass";
+      };
+
+      SpreadView.prototype.render_init = function() {
+        return this.$el.html("");
+      };
+
+      return SpreadView;
+
+    })(continuum_view.View);
+    Spread = (function(_super) {
+      __extends(Spread, _super);
+
+      function Spread() {
+        _ref1 = Spread.__super__.constructor.apply(this, arguments);
+        return _ref1;
+      }
+
+      Spread.prototype.type = "Spread";
+
+      Spread.prototype.default_view = SpreadView;
+
+      return Spread;
+
+    })(HasParent);
+    Spreads = (function(_super) {
+      __extends(Spreads, _super);
+
+      function Spreads() {
+        _ref2 = Spreads.__super__.constructor.apply(this, arguments);
+        return _ref2;
+      }
+
+      Spreads.prototype.model = Spread;
+
+      return Spreads;
+
+    })(Backbone.Collection);
+    return {
+      "Model": Spread,
+      "Collection": new Spreads()
+    };
+  });
+
+}).call(this);
+
+/*
+//@ sourceMappingURL=spread.js.map
+*/;
+(function() {
+  define('common/base',["underscore", "require", "common/custom", "common/gmap_plot", "common/grid_plot", "common/plot", "common/plot_context", "mapper/1d/categorical_mapper", "mapper/1d/linear_mapper", "mapper/1d/log_mapper", "mapper/2d/grid_mapper", "mapper/color/linear_color_mapper", "range/data_factor_range", "range/data_range1d", "range/factor_range", "range/range1d", "renderer/annotation/legend", "renderer/glyph/glyph_factory", "renderer/guide/categorical_axis", "renderer/guide/datetime_axis", "renderer/guide/grid", "renderer/guide/linear_axis", "renderer/guide/log_axis", "renderer/overlay/box_selection", "source/column_data_source", "source/server_data_source", "ticking/abstract_ticker", "ticking/adaptive_ticker", "ticking/basic_tick_formatter", "ticking/basic_ticker", "ticking/log_ticker", "ticking/log_tick_formatter", "ticking/categorical_tick_formatter", "ticking/categorical_ticker", "ticking/composite_ticker", "ticking/datetime_tick_formatter", "ticking/datetime_ticker", "ticking/days_ticker", "ticking/months_ticker", "ticking/single_interval_ticker", "ticking/years_ticker", "tool/box_select_tool", "tool/box_zoom_tool", "tool/click_tool", "tool/crosshair_tool", "tool/data_range_box_select_tool", "tool/embed_tool", "tool/hover_tool", "tool/pan_tool", "tool/preview_save_tool", "tool/reset_tool", "tool/resize_tool", "tool/wheel_zoom_tool", "tool/object_explorer_tool", "widget/data_slider", "widget/data_table", "widget/handson_table", "widget/table_column", "widget/pivot_table", "widget/object_explorer", "widget/pandas/ipython_remote_data", "widget/pandas/pandas_pivot_table", "widget/pandas/pandas_plot_source", 'widget/paragraph', 'widget/hbox', 'widget/vbox', 'widget/textinput', 'widget/vboxmodelform', 'widget/pretext', 'widget/selectbox', 'widget/slider', 'widget/crossfilter', 'widget/volumeslicer/volumeslicer', 'widget/multiselect', 'widget/date_range_slider', 'widget/date_picker', 'widget/panel', 'widget/tabs', 'widget/dialog', 'transforms/const', 'transforms/count', 'transforms/cuberoot', 'transforms/id', 'transforms/interpolate', 'transforms/seq', 'transforms/spread'], function(_, require) {
     var Collections, Config, collection_overrides, locations, mod_cache, url;
     require("common/custom").monkey_patch();
     Config = {};
@@ -62666,6 +63262,7 @@ define('widget/dialog_template',[],function(){
       Range1d: 'range/range1d',
       Glyph: 'renderer/glyph/glyph_factory',
       LinearAxis: 'renderer/guide/linear_axis',
+      LogAxis: 'renderer/guide/log_axis',
       CategoricalAxis: 'renderer/guide/categorical_axis',
       DatetimeAxis: 'renderer/guide/datetime_axis',
       Grid: 'renderer/guide/grid',
@@ -62677,6 +63274,8 @@ define('widget/dialog_template',[],function(){
       AdaptiveTicker: 'ticking/adaptive_ticker',
       BasicTicker: 'ticking/basic_ticker',
       BasicTickFormatter: 'ticking/basic_tick_formatter',
+      LogTicker: 'ticking/log_ticker',
+      LogTickFormatter: 'ticking/log_tick_formatter',
       CategoricalTicker: 'ticking/categorical_ticker',
       CategoricalTickFormatter: 'ticking/categorical_tick_formatter',
       CompositeTicker: 'ticking/composite_ticker',
@@ -62729,7 +63328,8 @@ define('widget/dialog_template',[],function(){
       Cuberoot: 'transforms/cuberoot',
       Id: 'transforms/id',
       Interpolate: 'transforms/interpolate',
-      Seq: 'transforms/seq'
+      Seq: 'transforms/seq',
+      Spread: 'transforms/spread'
     };
     mod_cache = {};
     collection_overrides = {};
@@ -64275,7 +64875,7 @@ define('server/usercontext/wrappertemplate',[],function(){
 //@ sourceMappingURL=serverrun.js.map
 */;
 (function() {
-  define('main',['require','exports','module','underscore','jquery','backbone','common/base','common/base','common/gmap_plot','common/grid_plot','common/has_parent','common/has_properties','common/plot','common/plotting','common/affine','common/build_views','common/bulk_save','common/continuum_view','common/grid_view_state','common/load_models','common/plot_context','common/plot_widget','common/png_view','common/random','common/safebind','common/svg_colors','common/view_state','mapper/1d/linear_mapper','mapper/1d/categorical_mapper','mapper/2d/grid_mapper','mapper/color/linear_color_mapper','palettes/palettes','renderer/annotation/legend','renderer/glyph/glyph','renderer/glyph/glyph_factory','renderer/guide/categorical_axis','renderer/guide/datetime_axis','renderer/guide/grid','renderer/guide/linear_axis','renderer/overlay/box_selection','renderer/properties','server/embed','server/serverrun','server/serverutils','source/column_data_source','ticking/abstract_ticker','ticking/adaptive_ticker','ticking/basic_ticker','ticking/basic_tick_formatter','ticking/categorical_ticker','ticking/categorical_tick_formatter','ticking/composite_ticker','ticking/datetime_ticker','ticking/datetime_tick_formatter','ticking/days_ticker','ticking/months_ticker','ticking/single_interval_ticker','ticking/years_ticker','tool/box_select_tool','tool/box_zoom_tool','tool/click_tool','tool/crosshair_tool','tool/data_range_box_select_tool','tool/embed_tool','tool/hover_tool','tool/pan_tool','tool/preview_save_tool','tool/reset_tool','tool/resize_tool','tool/wheel_zoom_tool','tool/object_explorer_tool','server/serverrun','server/serverrun','widget/data_slider','widget/hbox','widget/vbox','widget/vboxmodelform','widget/textinput','widget/crossfilter','widget/object_explorer'],function(require, exports, module) {
+  define('main',['require','exports','module','underscore','jquery','backbone','common/base','common/base','common/gmap_plot','common/grid_plot','common/has_parent','common/has_properties','common/plot','common/plotting','common/affine','common/build_views','common/bulk_save','common/continuum_view','common/grid_view_state','common/load_models','common/plot_context','common/plot_widget','common/png_view','common/random','common/safebind','common/svg_colors','common/view_state','mapper/1d/linear_mapper','mapper/1d/log_mapper','mapper/1d/categorical_mapper','mapper/2d/grid_mapper','mapper/color/linear_color_mapper','palettes/palettes','renderer/annotation/legend','renderer/glyph/glyph','renderer/glyph/glyph_factory','renderer/guide/categorical_axis','renderer/guide/datetime_axis','renderer/guide/grid','renderer/guide/linear_axis','renderer/guide/log_axis','renderer/overlay/box_selection','renderer/properties','server/embed','server/serverrun','server/serverutils','source/column_data_source','ticking/abstract_ticker','ticking/adaptive_ticker','ticking/basic_ticker','ticking/basic_tick_formatter','ticking/log_ticker','ticking/log_tick_formatter','ticking/categorical_ticker','ticking/categorical_tick_formatter','ticking/composite_ticker','ticking/datetime_ticker','ticking/datetime_tick_formatter','ticking/days_ticker','ticking/months_ticker','ticking/single_interval_ticker','ticking/years_ticker','tool/box_select_tool','tool/box_zoom_tool','tool/click_tool','tool/crosshair_tool','tool/data_range_box_select_tool','tool/embed_tool','tool/hover_tool','tool/pan_tool','tool/preview_save_tool','tool/reset_tool','tool/resize_tool','tool/wheel_zoom_tool','tool/object_explorer_tool','server/serverrun','server/serverrun','widget/data_slider','widget/hbox','widget/vbox','widget/vboxmodelform','widget/textinput','widget/crossfilter','widget/object_explorer'],function(require, exports, module) {
     var Bokeh, glyph_factory, _oldJQ;
     if (!window.Float64Array) {
       console.warn("Float64Array is not supported. Using generic Array instead.");
@@ -64283,7 +64883,7 @@ define('server/usercontext/wrappertemplate',[],function(){
     }
     Bokeh = {};
     Bokeh.require = require;
-    Bokeh.version = '0.4.4';
+    Bokeh.version = '0.5.0rc2';
     Bokeh._ = require("underscore");
     Bokeh.$ = require("jquery");
     Bokeh.Backbone = require("backbone");
@@ -64314,6 +64914,7 @@ define('server/usercontext/wrappertemplate',[],function(){
     Bokeh.SVGColors = require("common/svg_colors");
     Bokeh.ViewState = require("common/view_state");
     Bokeh.LinearMapper = require("mapper/1d/linear_mapper");
+    Bokeh.LogMapper = require("mapper/1d/log_mapper");
     Bokeh.CategoricalMapper = require("mapper/1d/categorical_mapper");
     Bokeh.GridMapper = require("mapper/2d/grid_mapper");
     Bokeh.LinearColorMapper = require("mapper/color/linear_color_mapper");
@@ -64357,6 +64958,7 @@ define('server/usercontext/wrappertemplate',[],function(){
     Bokeh.DatetimeAxis = require("renderer/guide/datetime_axis");
     Bokeh.Grid = require("renderer/guide/grid");
     Bokeh.LinearAxis = require("renderer/guide/linear_axis");
+    Bokeh.LogAxis = require("renderer/guide/log_axis");
     Bokeh.BoxSelection = require("renderer/overlay/box_selection");
     Bokeh.Properties = require("renderer/properties");
     Bokeh.embed = require("server/embed");
@@ -64367,6 +64969,8 @@ define('server/usercontext/wrappertemplate',[],function(){
     Bokeh.AdaptiveTicker = require("ticking/adaptive_ticker");
     Bokeh.BasicTicker = require("ticking/basic_ticker");
     Bokeh.BasicTickFormatter = require("ticking/basic_tick_formatter");
+    Bokeh.LogTicker = require("ticking/log_ticker");
+    Bokeh.LogTickFormatter = require("ticking/log_tick_formatter");
     Bokeh.CategoricalTicker = require("ticking/categorical_ticker");
     Bokeh.CategoricalTickFormatter = require("ticking/categorical_tick_formatter");
     Bokeh.CompositeTicker = require("ticking/composite_ticker");
