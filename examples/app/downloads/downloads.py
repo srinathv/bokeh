@@ -19,11 +19,7 @@ from bokeh.objects import (Plot, ColumnDataSource, Range1d, DataRange1d, FactorR
 from bokeh.glyphs import Line, Circle, Rect
 from bokeh.properties import Dict, Float, String, Instance, Tuple, Enum, Date, lookup_descriptor
 
-parser = argparse.ArgumentParser()
-parser.add_argument("-D", "--data-dir", type=str, required=True, help="data directory")
-parser.add_argument("argv", nargs="*")
-args = parser.parse_args()
-sys.argv[1:] = args.argv
+data_dir = "/home/hugoshi/bokehdata/test-data"
 
 def load_csv(file_path):
     with gzip.open(file_path) as file:
@@ -32,7 +28,7 @@ def load_csv(file_path):
         return df
 
 def load_dataset(dataset_name):
-    dataset_path = abspath(join(expanduser(args.data_dir), dataset_name))
+    dataset_path = abspath(join(expanduser(data_dir), dataset_name))
     datasets = []
 
     for file_name in sorted(os.listdir(dataset_path)):
@@ -214,7 +210,7 @@ class DownloadsApp(BokehApplet):
         self.downloads_source._dirty = True
         self.punchcard_source._dirty = True
 
-DownloadsApp.add_route("/downloads", "http://localhost:5006")
+DownloadsApp.add_route("/bokeh/downloads/", "http://localhost:5006")
 
 if __name__ == "__main__":
     import bokeh.server
