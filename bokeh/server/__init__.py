@@ -142,7 +142,7 @@ def run():
     args = parser.parse_args(sys.argv[1:])
 
     level = logging.DEBUG if args.debug else logging.INFO
-    logging.basicConfig(level=level, format="%(asctime)s:%(levelname)s:%(name)s:%(message)s")
+    logging.basicConfig(level=level, format="%(asctime)s:%(levelname)s:%(process)d:%(name)s:%(message)s")
 
     backend_options = args.backend
     if backend_options == 'redis':
