@@ -1,6 +1,7 @@
 import numpy as np
 from ..objects import ServerDataSource
-
+import logging
+log = logging.getLogger(__name__)
 try:
     import scipy
     import scipy.misc
@@ -36,6 +37,7 @@ def downsample(arr, global_x_range, global_y_range,
 
     # compute the dimension number of the dimensions we are downsampling over
     # (where the Nones are).  transposing results in swapping dims
+    log.info("INDEX_SLICE %s", index_slice)
     if index_slice:
         image_indexes = [idx for idx, val in enumerate(index_slice) if val is None]
         image_shapes = [shape[x] for x in image_indexes]
@@ -72,8 +74,7 @@ def downsample(arr, global_x_range, global_y_range,
     # swap out the Nones with actual slice objects
     index_slice[image_indexes[1]] = slice(x_bounds[0], x_bounds[1], x_downsample_factor)
     index_slice[image_indexes[0]] = slice(y_bounds[0], y_bounds[1], y_downsample_factor)
-    if index_slice[-1] == 0:
-        print ("SLICE", index_slice, arr.shape)
+    log.info ("SLICE %s %s", index_slice, arr.shape)
     subset = arr[tuple(index_slice)]
     if transpose:
         subset = subset.T

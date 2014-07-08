@@ -5,6 +5,9 @@ from ..objects import ServerDataSource, Plot, Range1d
 from ..properties import Instance, Int, List
 from ..plotting import image
 
+import logging
+log = logging.getLogger(__name__)
+
 class VolumeSlicer(PlotObject):
     server_data_source = Instance(ServerDataSource)
     vert_source = Instance(ServerDataSource)
@@ -67,6 +70,7 @@ class VolumeSlicer(PlotObject):
                   'dw' : z_bounds[-1] - z_bounds[0],
                   'dh' : y_bounds[-1] - y_bounds[0],
                   'palette': ["Spectral-256"]})
+        log.info(horiz_source.index_slice)
         main_plot = image(
             source=source,
             image="image",
