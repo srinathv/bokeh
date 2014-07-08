@@ -72,3 +72,4 @@ def timeseries():
     box.children.append(plot3)
     return box
         
+import crossfilter
