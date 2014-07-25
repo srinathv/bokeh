@@ -96,6 +96,9 @@ class InstallersModel(VBoxModelForm):
     #    "max_date": end.default,
     #}]
     }]
+    def update(self, *args, **kwargs):
+        print (kwargs)
+        super(InstallersModel, self).update(*args, **kwargs)
 
 class DownloadsApp(BokehApplet):
     downloads_source = Instance(ColumnDataSource)
@@ -169,6 +172,10 @@ class DownloadsApp(BokehApplet):
         selected = installers
 
         start, end = self.modelform.period
+        if isinstance(start, float):
+            start *= 1000000.0
+        if isinstance(end, float):
+            end *= 1000000.0
         selected = selected[(selected.date >= start) & (selected.date <= end)]
 
         installer = self.modelform.installer
