@@ -12259,7 +12259,8 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
         coll = coll_attrs[0], attrs = coll_attrs[1];
         if (coll) {
           coll.add(attrs, {
-            'silent': true
+            'silent': true,
+            'defer_initialization': true
           });
         }
       }
@@ -12267,7 +12268,7 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
         coll_attrs = newspecs[_k];
         coll = coll_attrs[0], attrs = coll_attrs[1];
         if (coll) {
-          coll.get(attrs['id']).dinitialize(attrs);
+          coll.get(attrs['id']).initialize(attrs);
         }
       }
       for (_l = 0, _len3 = newspecs.length; _l < _len3; _l++) {
@@ -12458,32 +12459,23 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   define('common/has_properties',["underscore", "backbone", "require", "./base", "./safebind"], function(_, Backbone, require, base, safebind) {
-    var HasProperties, _ref;
+    var HasProperties;
     return HasProperties = (function(_super) {
       __extends(HasProperties, _super);
-
-      function HasProperties() {
-        this.rpc = __bind(this.rpc, this);
-        this.get_obj = __bind(this.get_obj, this);
-        this.resolve_ref = __bind(this.resolve_ref, this);
-        this.convert_to_ref = __bind(this.convert_to_ref, this);
-        _ref = HasProperties.__super__.constructor.apply(this, arguments);
-        return _ref;
-      }
 
       HasProperties.prototype.toString = function() {
         return "" + this.type + "(" + this.id + ")";
       };
 
       HasProperties.prototype.destroy = function(options) {
-        var target, val, _ref1, _results;
+        var target, val, _ref, _results;
         HasProperties.__super__.destroy.call(this, options);
         if (_.has(this, 'eventers')) {
-          _ref1 = this.eventers;
+          _ref = this.eventers;
           _results = [];
-          for (target in _ref1) {
-            if (!__hasProp.call(_ref1, target)) continue;
-            val = _ref1[target];
+          for (target in _ref) {
+            if (!__hasProp.call(_ref, target)) continue;
+            val = _ref[target];
             _results.push(val.off(null, null, this));
           }
           return _results;
@@ -12494,15 +12486,27 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
         return false;
       };
 
-      HasProperties.prototype.initialize = function(attrs, options) {
-        var _this = this;
-        if (!attrs) {
-          attrs = {};
-        }
+      function HasProperties(attributes, options) {
+        this.rpc = __bind(this.rpc, this);
+        this.get_obj = __bind(this.get_obj, this);
+        this.resolve_ref = __bind(this.resolve_ref, this);
+        this.convert_to_ref = __bind(this.convert_to_ref, this);
+        var attrs;
+        attrs = attributes || {};
         if (!options) {
           options = {};
         }
-        HasProperties.__super__.initialize.call(this, attrs, options);
+        this.cid = _.uniqueId('c');
+        this.attributes = {};
+        if (options.collection) {
+          this.collection = options.collection;
+        }
+        if (options.parse) {
+          attrs = this.parse(attrs, options) || {};
+        }
+        attrs = _.defaults({}, attrs, _.result(this, 'defaults'));
+        this.set(attrs, options);
+        this.changed = {};
         this._base = false;
         this.properties = {};
         this.property_cache = {};
@@ -12510,16 +12514,10 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
           this.id = _.uniqueId(this.type);
           this.attributes[this.idAttribute] = this.id;
         }
-        return _.defer(function() {
-          if (!_this.inited) {
-            return _this.dinitialize(attrs, options);
-          }
-        });
-      };
-
-      HasProperties.prototype.dinitialize = function(attrs, options) {
-        return this.inited = true;
-      };
+        if (!options.defer_initialization) {
+          this.initialize.apply(this, arguments);
+        }
+      }
 
       HasProperties.prototype.set_obj = function(key, value, options) {
         var attrs, val;
@@ -12644,15 +12642,15 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
       };
 
       HasProperties.prototype.remove_property = function(prop_name) {
-        var dep, dependencies, fld, obj, prop_spec, _i, _j, _len, _len1, _ref1;
+        var dep, dependencies, fld, obj, prop_spec, _i, _j, _len, _len1, _ref;
         prop_spec = this.properties[prop_name];
         dependencies = prop_spec.dependencies;
         for (_i = 0, _len = dependencies.length; _i < _len; _i++) {
           dep = dependencies[_i];
           obj = dep.obj;
-          _ref1 = dep['fields'];
-          for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-            fld = _ref1[_j];
+          _ref = dep['fields'];
+          for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+            fld = _ref[_j];
             obj.off('change:' + fld, prop_spec['callbacks']['changedep'], this);
           }
         }
@@ -15577,7 +15575,7 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
         this.canvas.attr('style', "width:" + ow + "px;");
         this.canvas.attr('style', "height:" + oh + "px;");
         this.canvas.attr('width', ow * ratio).attr('height', oh * ratio);
-        this.$el.width(ow + 100);
+        this.$el.width(ow + 150);
         this.$el.height(oh);
         this.ctx.scale(ratio, ratio);
         this.ctx.translate(0.5, 0.5);
@@ -16008,8 +16006,10 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
         LinearColorMapper.__super__.initialize.call(this, attrs, options);
         this.palette = this._build_palette(this.get('palette'));
         this.little_endian = this._is_little_endian();
-        this.reserve_color = this.get('reserve_color')[0];
-        return this.reserve_val = this.get('reserve_val')[0];
+        if (this.get('reserve_color') != null) {
+          this.reserve_color = this.get('reserve_color')[0];
+          return this.reserve_val = this.get('reserve_val')[0];
+        }
       };
 
       LinearColorMapper.prototype.v_map_screen = function(data) {
@@ -16218,8 +16218,8 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
         return uniques;
       };
 
-      DataFactorRange.prototype.dinitialize = function(attrs, options) {
-        DataFactorRange.__super__.dinitialize.call(this, attrs, options);
+      DataFactorRange.prototype.initialize = function(attrs, options) {
+        DataFactorRange.__super__.initialize.call(this, attrs, options);
         this.register_property;
         this.register_property('values', this._get_values, true);
         this.add_dependencies('values', this, ['data_source', 'columns']);
@@ -16336,7 +16336,7 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
         return this.set('_end', end);
       };
 
-      DataRange1d.prototype.dinitialize = function(attrs, options) {
+      DataRange1d.prototype.initialize = function(attrs, options) {
         var columns_ref, source, _i, _len, _ref1;
         this.register_property('minmax', this._get_minmax, true);
         this.add_dependencies('minmax', this, ['sources'], ['rangepadding']);
@@ -16352,7 +16352,7 @@ if ( typeof window === "object" && typeof window.document === "object" ) {
         this.register_property('end', this._get_end, true);
         this.register_setter('end', this._set_end);
         this.add_dependencies('end', this, ['minmax', '_end']);
-        return DataRange1d.__super__.dinitialize.call(this, attrs, options);
+        return DataRange1d.__super__.initialize.call(this, attrs, options);
       };
 
       DataRange1d.prototype.defaults = function() {
@@ -17305,7 +17305,7 @@ if (typeof define === 'function' && define.amd) {
         data = _.extend({}, this.mget_obj('data_source').get('data'), serversource.get('data'));
         this.mget_obj('data_source').set('data', data);
         this.set_data(false);
-        transform_params = serversource.get('transform');
+        transform_params = serversource.attributes['transform'];
         resample_op = transform_params['resample'];
         x_range = this.plot_view.view_state.get('inner_range_horizontal');
         y_range = this.plot_view.view_state.get('inner_range_vertical');
@@ -20241,8 +20241,7 @@ return { create_gear_tooth: createGearTooth, create_internal_gear_tooth: createI
         8: [0xd53e4f, 0xf46d43, 0xfdae61, 0xfee08b, 0xe6f598, 0xabdda4, 0x66c2a5, 0x3288bd],
         9: [0xd53e4f, 0xf46d43, 0xfdae61, 0xfee08b, 0xffffbf, 0xe6f598, 0xabdda4, 0x66c2a5, 0x3288bd],
         10: [0x9e0142, 0xd53e4f, 0xf46d43, 0xfdae61, 0xfee08b, 0xe6f598, 0xabdda4, 0x66c2a5, 0x3288bd, 0x5e4fa2],
-        11: [0x9e0142, 0xd53e4f, 0xf46d43, 0xfdae61, 0xfee08b, 0xffffbf, 0xe6f598, 0xabdda4, 0x66c2a5, 0x3288bd, 0x5e4fa2],
-        256: [0x800000, 0x840000, 0x890000, 0x8d0000, 0x920000, 0x960000, 0x9b0000, 0x9f0000, 0xa40000, 0xa80000, 0xad0000, 0xb20000, 0xb60000, 0xbb0000, 0xbf0000, 0xc40000, 0xc80000, 0xcd0000, 0xd10000, 0xd60000, 0xda0000, 0xdf0000, 0xe40000, 0xe80000, 0xed0400, 0xf10800, 0xf60b00, 0xfa0f00, 0xff1300, 0xff1600, 0xff1a00, 0xff1e00, 0xff2200, 0xff2500, 0xff2900, 0xff2d00, 0xff3000, 0xff3400, 0xff3800, 0xff3b00, 0xff3f00, 0xff4300, 0xff4700, 0xff4a00, 0xff4e00, 0xff5200, 0xff5500, 0xff5900, 0xff5d00, 0xff6000, 0xff6400, 0xff6800, 0xff6c00, 0xff6f00, 0xff7300, 0xff7700, 0xff7a00, 0xff7e00, 0xff8200, 0xff8600, 0xff8900, 0xff8d00, 0xff9100, 0xff9400, 0xff9800, 0xff9c00, 0xff9f00, 0xffa300, 0xffa700, 0xffab00, 0xffae00, 0xffb200, 0xffb600, 0xffb900, 0xffbd00, 0xffc100, 0xffc400, 0xffc800, 0xffcc00, 0xffd000, 0xffd300, 0xffd700, 0xffdb00, 0xffde00, 0xffe200, 0xffe600, 0xffea00, 0xfeed00, 0xfbf100, 0xf8f500, 0xf4f802, 0xf1fc06, 0xeeff09, 0xebff0c, 0xe7ff0f, 0xe4ff13, 0xe1ff16, 0xdeff19, 0xdbff1c, 0xd7ff1f, 0xd4ff23, 0xd1ff26, 0xceff29, 0xcaff2c, 0xc7ff30, 0xc4ff33, 0xc1ff36, 0xbeff39, 0xbaff3c, 0xb7ff40, 0xb4ff43, 0xb1ff46, 0xadff49, 0xaaff4d, 0xa7ff50, 0xa4ff53, 0xa0ff56, 0x9dff5a, 0x9aff5d, 0x97ff60, 0x94ff63, 0x90ff66, 0x8dff6a, 0x8aff6d, 0x87ff70, 0x83ff73, 0x80ff77, 0x7dff7a, 0x7aff7d, 0x77ff80, 0x73ff83, 0x70ff87, 0x6dff8a, 0x6aff8d, 0x66ff90, 0x63ff94, 0x60ff97, 0x5dff9a, 0x5aff9d, 0x56ffa0, 0x53ffa4, 0x50ffa7, 0x4dffaa, 0x49ffad, 0x46ffb1, 0x43ffb4, 0x40ffb7, 0x3cffba, 0x39ffbe, 0x36ffc1, 0x33ffc4, 0x30ffc7, 0x2cffca, 0x29ffce, 0x26ffd1, 0x23ffd4, 0x1fffd7, 0x1cffdb, 0x19ffde, 0x16ffe1, 0x13fce4, 0x0ff8e7, 0x0cf4eb, 0x09f0ee, 0x06ecf1, 0x02e8f4, 0x00e4f8, 0x00e0fb, 0x00dcfe, 0x00d8ff, 0x00d4ff, 0x00d0ff, 0x00ccff, 0x00c8ff, 0x00c4ff, 0x00c0ff, 0x00bcff, 0x00b8ff, 0x00b4ff, 0x00b0ff, 0x00acff, 0x00a8ff, 0x00a4ff, 0x00a0ff, 0x009cff, 0x0098ff, 0x0094ff, 0x0090ff, 0x008cff, 0x0088ff, 0x0084ff, 0x0080ff, 0x007cff, 0x0078ff, 0x0074ff, 0x0070ff, 0x006cff, 0x0068ff, 0x0064ff, 0x0060ff, 0x005cff, 0x0058ff, 0x0054ff, 0x0050ff, 0x004cff, 0x0048ff, 0x0044ff, 0x0040ff, 0x003cff, 0x0038ff, 0x0034ff, 0x0030ff, 0x002cff, 0x0028ff, 0x0024ff, 0x0020ff, 0x001cff, 0x0018ff, 0x0014ff, 0x0010ff, 0x000cff, 0x0008ff, 0x0004ff, 0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff, 0x0000fa, 0x0000f6, 0x0000f1, 0x0000ed, 0x0000e8, 0x0000e3, 0x0000df, 0x0000da, 0x0000d6, 0x0000d1, 0x0000cd, 0x0000c8, 0x0000c4, 0x0000bf, 0x0000bb, 0x0000b6, 0x0000b2, 0x0000ad, 0x0000a8, 0x0000a4, 0x00009f, 0x00009b, 0x000096, 0x000092, 0x00008d, 0x000089, 0x000084, 0x000080]
+        11: [0x9e0142, 0xd53e4f, 0xf46d43, 0xfdae61, 0xfee08b, 0xffffbf, 0xe6f598, 0xabdda4, 0x66c2a5, 0x3288bd, 0x5e4fa2]
       },
       RdYlGn: {
         3: [0xfc8d59, 0xffffbf, 0x91cf60],
@@ -23504,10 +23503,7 @@ return { create_gear_tooth: createGearTooth, create_internal_gear_tooth: createI
         this.add_dependencies('normals', this, ['computed_bounds', 'dimension', 'location']);
         this.register_property('side', this._side, false);
         this.add_dependencies('side', this, ['normals']);
-        return this.register_property('padding_request', this._padding_request, false);
-      };
-
-      Axis.prototype.dinitialize = function(attrs, options) {
+        this.register_property('padding_request', this._padding_request, false);
         return this.add_dependencies('computed_bounds', this.get_obj('plot'), ['x_range', 'y_range']);
       };
 
@@ -23907,8 +23903,8 @@ return { create_gear_tooth: createGearTooth, create_internal_gear_tooth: createI
 
       CategoricalAxis.prototype.type = 'CategoricalAxis';
 
-      CategoricalAxis.prototype.dinitialize = function(attrs, objects) {
-        CategoricalAxis.__super__.dinitialize.call(this, attrs, objects);
+      CategoricalAxis.prototype.initialize = function(attrs, objects) {
+        CategoricalAxis.__super__.initialize.call(this, attrs, objects);
         if (this.get_obj('ticker') == null) {
           this.set_obj('ticker', CategoricalTicker.Collection.create());
         }
@@ -24902,7 +24898,7 @@ return { create_gear_tooth: createGearTooth, create_internal_gear_tooth: createI
 */;
 (function(root) {
 define("sprintf", [], function() {
-  return (function() {
+      return (function() {
 /*! sprintf.js | Copyright (c) 2007-2013 Alexandru Marasteanu <hello at alexei dot ro> | 3 clause BSD license */
 
 (function(ctx) {
@@ -25037,10 +25033,8 @@ define("sprintf", [], function() {
 	ctx.sprintf = sprintf;
 	ctx.vsprintf = vsprintf;
 })(typeof exports != "undefined" ? exports : window);
-
-return root.sprintf = sprintf;
-  }).apply(root, arguments);
-});
+return root.sprintf = sprintf;      }).apply(root, arguments);
+    });
 }(this));
 
 !function (definition) {
@@ -25679,8 +25673,8 @@ return root.sprintf = sprintf;
 
       DatetimeAxis.prototype.type = 'DatetimeAxis';
 
-      DatetimeAxis.prototype.dinitialize = function(attrs, objects) {
-        DatetimeAxis.__super__.dinitialize.call(this, attrs, objects);
+      DatetimeAxis.prototype.initialize = function(attrs, objects) {
+        DatetimeAxis.__super__.initialize.call(this, attrs, objects);
         if (this.get_obj('ticker') == null) {
           this.set_obj('ticker', DatetimeTicker.Collection.create());
         }
@@ -26059,8 +26053,8 @@ return root.sprintf = sprintf;
 
       LinearAxis.prototype.type = 'LinearAxis';
 
-      LinearAxis.prototype.dinitialize = function(attrs, objects) {
-        LinearAxis.__super__.dinitialize.call(this, attrs, objects);
+      LinearAxis.prototype.initialize = function(attrs, objects) {
+        LinearAxis.__super__.initialize.call(this, attrs, objects);
         if (this.get_obj('ticker') == null) {
           this.set_obj('ticker', BasicTicker.Collection.create());
         }
@@ -26281,8 +26275,8 @@ return root.sprintf = sprintf;
 
       LogTickFormatter.prototype.type = 'LogTickFormatter';
 
-      LogTickFormatter.prototype.dinitialize = function(attrs, options) {
-        LogTickFormatter.__super__.dinitialize.call(this, attrs, options);
+      LogTickFormatter.prototype.initialize = function(attrs, options) {
+        LogTickFormatter.__super__.initialize.call(this, attrs, options);
         return this.basic_formatter = new BasicTickFormatter.Model();
       };
 
@@ -26362,8 +26356,8 @@ return root.sprintf = sprintf;
 
       LogAxis.prototype.type = 'LogAxis';
 
-      LogAxis.prototype.dinitialize = function(attrs, objects) {
-        LogAxis.__super__.dinitialize.call(this, attrs, objects);
+      LogAxis.prototype.initialize = function(attrs, objects) {
+        LogAxis.__super__.initialize.call(this, attrs, objects);
         if (this.get_obj('ticker') == null) {
           this.set_obj('ticker', LogTicker.Collection.create());
         }
@@ -26852,7 +26846,7 @@ return root.sprintf = sprintf;
         global_offset_y = this.get('data').global_offset_y[0];
         index_slice = this.get('index_slice');
         data_slice = this.get('data_slice');
-        params = [global_x_range, global_y_range, global_offset_x, global_offset_y, index_slice, data_slice, this.get('transform').transpose, input_params];
+        params = [global_x_range, global_y_range, global_offset_x, global_offset_y, index_slice, data_slice, this.get('transpose'), input_params];
         return $.ajax({
           dataType: 'json',
           url: this.update_url(),
@@ -27843,9 +27837,9 @@ return root.sprintf = sprintf;
 
       ClickTool.prototype.type = "ClickTool";
 
-      ClickTool.prototype.dinitialize = function(attrs, options) {
+      ClickTool.prototype.initialize = function(attrs, options) {
         var all_renderers, names, r, renderers;
-        ClickTool.__super__.dinitialize.call(this, attrs, options);
+        ClickTool.__super__.initialize.call(this, attrs, options);
         names = this.get('names');
         all_renderers = this.get_obj('plot').get_obj('renderers');
         renderers = (function() {
@@ -28791,9 +28785,9 @@ define('tool/embed_tool_template',[],function(){
 
       HoverTool.prototype.type = "HoverTool";
 
-      HoverTool.prototype.dinitialize = function(attrs, options) {
+      HoverTool.prototype.initialize = function(attrs, options) {
         var all_renderers, names, r, renderers;
-        HoverTool.__super__.dinitialize.call(this, attrs, options);
+        HoverTool.__super__.initialize.call(this, attrs, options);
         names = this.get('names');
         all_renderers = this.get_obj('plot').get_obj('renderers');
         renderers = (function() {
@@ -36478,7 +36472,6 @@ define('widget/data_table_template',[],function(){
 
       function DataTable() {
         this.toggle_column_sort = __bind(this.toggle_column_sort, this);
-        this.dinitialize = __bind(this.dinitialize, this);
         _ref1 = DataTable.__super__.constructor.apply(this, arguments);
         return _ref1;
       }
@@ -36491,10 +36484,6 @@ define('widget/data_table_template',[],function(){
         return this.throttled_fetch = _.throttle((function() {
           return _this.fetch();
         }), 500);
-      };
-
-      DataTable.prototype.dinitialize = function(attrs, options) {
-        return DataTable.__super__.dinitialize.call(this, attrs, options);
       };
 
       DataTable.prototype.fetch = function(options) {
@@ -55151,7 +55140,6 @@ define('widget/pandas/pandas_pivot_template',[],function(){
 
       function PandasPivotTable() {
         this.toggle_column_sort = __bind(this.toggle_column_sort, this);
-        this.dinitialize = __bind(this.dinitialize, this);
         _ref1 = PandasPivotTable.__super__.constructor.apply(this, arguments);
         return _ref1;
       }
@@ -55164,10 +55152,6 @@ define('widget/pandas/pandas_pivot_template',[],function(){
         return this.throttled_fetch = _.throttle((function() {
           return _this.fetch();
         }), 500);
-      };
-
-      PandasPivotTable.prototype.dinitialize = function(attrs, options) {
-        return PandasPivotTable.__super__.dinitialize.call(this, attrs, options);
       };
 
       PandasPivotTable.prototype.fetch = function(options) {
@@ -59215,7 +59199,7 @@ define('widget/facetcolumntemplate',[],function(){
 /*
 //@ sourceMappingURL=crossfilter.js.map
 */;
-define('widget/volumeslicer/volumeslicertemplate',[],function(){
+define('widget/multiselecttemplate',[],function(){
   var template = function(__obj) {
   var _safe = function(value) {
     if (typeof value === 'undefined' && value == null)
@@ -59237,7 +59221,47 @@ define('widget/volumeslicer/volumeslicertemplate',[],function(){
       return _safe(result);
     };
     (function() {
-      _print(_safe('<table>\n  <tbody>\n    <tr>\n      <td>\n        <div style="height:320px;width:50px;margin-top:40px">\n          <div class="app_slider" style="height:100%">\n          </div>\n        </div>\n      </td>\n      <td>\n        <div class="main_plot"></div>\n      </td>\n      <td>\n        <div style="height:320px;width:50px;margin-top:40px">\n          <div class="vert_slider" style="height:100%">\n          </div>\n        </div>\n      </td>\n      <td>\n        <div class="vert_plot"></div>\n      </td>\n    </tr>\n    <tr>\n      <td>\n      </td>\n      <td>\n        <div style="height:40;width:510px;margin-left:40px">\n          <div class="horiz_slider" style="width:100%">\n          </div>\n        </div>\n      </td>\n      <td>\n      </td>\n      <td>\n      </td>\n    </tr>\n\n    </tr>\n      <td>\n      </td>\n      <td>\n        <div class="horiz_plot"></div>\n      </td>\n      <td>\n      </td>\n      <td>\n      </td>\n    </tr>\n  </tbody>\n</table>\n'));
+      var option, _i, _len, _ref;
+    
+      _print(_safe('<label for="'));
+    
+      _print(this.id);
+    
+      _print(_safe('"> '));
+    
+      _print(this.title);
+    
+      _print(_safe(' </label>\n<select multiple class="bk-widget-form-input" id="'));
+    
+      _print(this.id);
+    
+      _print(_safe('" name="'));
+    
+      _print(this.name);
+    
+      _print(_safe('">\n  '));
+    
+      _ref = this.options;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        option = _ref[_i];
+        _print(_safe('\n  '));
+        if (option.value === this.value) {
+          _print(_safe('\n  <option selected="selected" value="'));
+          _print(option.value);
+          _print(_safe('">'));
+          _print(option.name);
+          _print(_safe('</option>\n  '));
+        } else {
+          _print(_safe('\n  <option value="'));
+          _print(option.value);
+          _print(_safe('">'));
+          _print(option.name);
+          _print(_safe('</option> \n  '));
+        }
+        _print(_safe('\n\n  '));
+      }
+    
+      _print(_safe('\n</select>\n'));
     
     }).call(this);
     
@@ -59260,6 +59284,122 @@ define('widget/volumeslicer/volumeslicertemplate',[],function(){
   return template;
 });
 
+(function() {
+  var __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  define('widget/multiselect',["common/has_parent", "common/continuum_view", "backbone", "underscore", "./multiselecttemplate"], function(HasParent, continuum_view, Backbone, _, multiselecttemplate) {
+    var ContinuumView, MultiSelect, MultiSelectView, MultiSelects, multiselectboxes, _ref, _ref1, _ref2;
+    ContinuumView = continuum_view.View;
+    MultiSelectView = (function(_super) {
+      __extends(MultiSelectView, _super);
+
+      function MultiSelectView() {
+        _ref = MultiSelectView.__super__.constructor.apply(this, arguments);
+        return _ref;
+      }
+
+      MultiSelectView.prototype.events = {
+        "change select": "change_input"
+      };
+
+      MultiSelectView.prototype.change_input = function() {
+        this.mset('value', this.$('select').val(), {
+          'silent': true
+        });
+        return this.model.save();
+      };
+
+      MultiSelectView.prototype.tagName = "div";
+
+      MultiSelectView.prototype.template = multiselecttemplate;
+
+      MultiSelectView.prototype.initialize = function(options) {
+        MultiSelectView.__super__.initialize.call(this, options);
+        this.render();
+        this.listenTo(this.model, 'change:value', this.render_selection);
+        this.listenTo(this.model, 'change:options', this.render);
+        this.listenTo(this.model, 'change:name', this.render);
+        return this.listenTo(this.model, 'change:title', this.render);
+      };
+
+      MultiSelectView.prototype.render = function() {
+        var html;
+        this.$el.empty();
+        html = this.template(this.model.attributes);
+        this.$el.html(html);
+        this.render_selection();
+        return this;
+      };
+
+      MultiSelectView.prototype.render_selection = function() {
+        var values;
+        values = {};
+        _.map(this.mget('value'), function(x) {
+          return values[x] = true;
+        });
+        return this.$('option').each(function(el) {
+          el = $(el);
+          if (values[el.attr('value')]) {
+            return el.attr('selected', 'selected');
+          }
+        });
+      };
+
+      return MultiSelectView;
+
+    })(ContinuumView);
+    MultiSelect = (function(_super) {
+      __extends(MultiSelect, _super);
+
+      function MultiSelect() {
+        _ref1 = MultiSelect.__super__.constructor.apply(this, arguments);
+        return _ref1;
+      }
+
+      MultiSelect.prototype.type = "MultiSelect";
+
+      MultiSelect.prototype.default_view = MultiSelectView;
+
+      MultiSelect.prototype.defaults = function() {
+        var def;
+        def = {
+          title: '',
+          value: [],
+          options: []
+        };
+        return def;
+      };
+
+      return MultiSelect;
+
+    })(HasParent);
+    MultiSelects = (function(_super) {
+      __extends(MultiSelects, _super);
+
+      function MultiSelects() {
+        _ref2 = MultiSelects.__super__.constructor.apply(this, arguments);
+        return _ref2;
+      }
+
+      MultiSelects.prototype.model = MultiSelect;
+
+      return MultiSelects;
+
+    })(Backbone.Collection);
+    multiselectboxes = new MultiSelects();
+    return {
+      "Model": MultiSelect,
+      "Collection": multiselectboxes,
+      "View": MultiSelectView
+    };
+  });
+
+}).call(this);
+
+/*
+//@ sourceMappingURL=multiselect.js.map
+*/;
 /*! Copyright (c) 2013 Brandon Aaron (http://brandon.aaron.sh)
  * Licensed under the MIT License (LICENSE.txt).
  *
@@ -59462,442 +59602,12 @@ define('widget/volumeslicer/volumeslicertemplate',[],function(){
 
 }));
 
-(function() {
-  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-  define('widget/volumeslicer/volumeslicer',["common/has_parent", "common/continuum_view", "./volumeslicertemplate", "jquery_ui/core", "jquery_ui/widget", "jquery_ui/mouse", "jquery_mousewheel", "jquery_ui/slider"], function(HasParent, ContinuumView, template, core, widget, mouse, mousewheel, slider) {
-    var VolumeSlicer, VolumeSlicerView, VolumeSlicers, _ref, _ref1, _ref2;
-    VolumeSlicerView = (function(_super) {
-      __extends(VolumeSlicerView, _super);
-
-      function VolumeSlicerView() {
-        this.auto_y_slider_bounds = __bind(this.auto_y_slider_bounds, this);
-        this.auto_x_slider_bounds = __bind(this.auto_x_slider_bounds, this);
-        _ref = VolumeSlicerView.__super__.constructor.apply(this, arguments);
-        return _ref;
-      }
-
-      VolumeSlicerView.prototype.template = template;
-
-      VolumeSlicerView.prototype.initialize = function(options) {
-        VolumeSlicerView.__super__.initialize.call(this, options);
-        this.plot = this.mget_obj('main_plot');
-        this.plot_view = new this.plot.default_view({
-          'model': this.plot
-        });
-        this.vert_plot = this.mget_obj('vert_plot');
-        this.vert_plot_view = new this.plot.default_view({
-          'model': this.vert_plot
-        });
-        this.horiz_plot = this.mget_obj('horiz_plot');
-        this.horiz_plot_view = new this.plot.default_view({
-          'model': this.horiz_plot
-        });
-        this.render();
-        this.listenTo(this.plot_view.y_range, 'change', this.auto_y_slider_bounds);
-        this.listenTo(this.plot_view.x_range, 'change', this.auto_x_slider_bounds);
-        return this;
-      };
-
-      VolumeSlicerView.prototype.z_slider_bounds = function(min, max) {
-        return this.$el.find(".app_slider").slider({
-          min: min,
-          max: max,
-          step: (max - min) / 50.0,
-          value: min
-        });
-      };
-
-      VolumeSlicerView.prototype.y_slider_bounds = function(min, max) {
-        return this.$el.find(".vert_slider").slider({
-          min: min,
-          max: max,
-          step: (max - min) / 50.0,
-          value: (min + max) / 2
-        });
-      };
-
-      VolumeSlicerView.prototype.x_slider_bounds = function(min, max) {
-        return this.$el.find(".horiz_slider").slider({
-          min: min,
-          max: max,
-          step: (max - min) / 50.0,
-          value: (min + max) / 2
-        });
-      };
-
-      VolumeSlicerView.prototype.auto_x_slider_bounds = function() {
-        var end, global_end, global_start, global_x_range, max, min, remote, start;
-        end = this.plot_view.x_range.get('end');
-        start = this.plot_view.x_range.get('start');
-        remote = this.mget_obj('server_data_source');
-        global_x_range = remote.get('data').global_x_range;
-        global_start = global_x_range[0];
-        global_end = global_x_range[1];
-        min = this.x_slice_max * (start - global_start) / (global_end - global_start);
-        max = this.x_slice_max * (end - global_start) / (global_end - global_start);
-        console.log('x slider bonds', min, max);
-        this.x_slider_bounds(min, max);
-        return this.x_slide((min + max) / 2);
-      };
-
-      VolumeSlicerView.prototype.auto_y_slider_bounds = function() {
-        var end, global_end, global_start, global_y_range, max, min, remote, start;
-        end = this.plot_view.y_range.get('end');
-        start = this.plot_view.y_range.get('start');
-        remote = this.mget_obj('server_data_source');
-        global_y_range = remote.get('data').global_y_range;
-        global_start = global_y_range[0];
-        global_end = global_y_range[1];
-        min = this.y_slice_max * (start - global_start) / (global_end - global_start);
-        max = this.y_slice_max * (end - global_start) / (global_end - global_start);
-        console.log('y slider bonds', min, max);
-        this.y_slider_bounds(min, max);
-        return this.y_slide((min + max) / 2);
-      };
-
-      VolumeSlicerView.prototype.y_slide = function(value) {
-        var current_slice, new_slice, remote, x;
-        remote = this.mget_obj('horiz_source');
-        current_slice = remote.get('index_slice');
-        new_slice = (function() {
-          var _i, _len, _results;
-          _results = [];
-          for (_i = 0, _len = current_slice.length; _i < _len; _i++) {
-            x = current_slice[_i];
-            _results.push(x);
-          }
-          return _results;
-        })();
-        new_slice[0] = Math.round(value);
-        return remote.set('index_slice', new_slice);
-      };
-
-      VolumeSlicerView.prototype.x_slide = function(value) {
-        var current_slice, new_slice, remote, x;
-        remote = this.mget_obj('vert_source');
-        current_slice = remote.get('index_slice');
-        new_slice = (function() {
-          var _i, _len, _results;
-          _results = [];
-          for (_i = 0, _len = current_slice.length; _i < _len; _i++) {
-            x = current_slice[_i];
-            _results.push(x);
-          }
-          return _results;
-        })();
-        new_slice[1] = Math.round(value);
-        return remote.set('index_slice', new_slice);
-      };
-
-      VolumeSlicerView.prototype.render = function() {
-        var _this = this;
-        VolumeSlicerView.__super__.render.call(this);
-        this.plot_view.$el.detach();
-        this.$el.html('');
-        this.$el.html(this.template());
-        this.$(".main_plot").append(this.plot_view.$el);
-        this.$(".vert_plot").append(this.vert_plot_view.$el);
-        this.$(".horiz_plot").append(this.horiz_plot_view.$el);
-        this.z_slice_max = this.mget('shape')[2];
-        this.z_slice_min = 0;
-        this.y_slice_max = this.mget('shape')[0];
-        this.y_slice_min = 0;
-        this.x_slice_max = this.mget('shape')[1];
-        this.x_slice_min = 0;
-        this.$el.find(".app_slider").slider({
-          orientation: "vertical",
-          animate: "fast",
-          slide: function(event, ui) {
-            var current_slice, new_slice, remote, x;
-            remote = _this.mget_obj('server_data_source');
-            current_slice = remote.get('index_slice');
-            new_slice = (function() {
-              var _i, _len, _results;
-              _results = [];
-              for (_i = 0, _len = current_slice.length; _i < _len; _i++) {
-                x = current_slice[_i];
-                _results.push(x);
-              }
-              return _results;
-            })();
-            new_slice[2] = Math.round(ui.value);
-            return remote.set('index_slice', new_slice);
-          }
-        });
-        this.z_slider_bounds(this.z_slice_min, this.z_slice_max);
-        this.$el.find(".vert_slider").slider({
-          orientation: "vertical",
-          animate: "fast",
-          slide: function(event, ui) {
-            return _this.y_slide(ui.value);
-          }
-        });
-        this.auto_y_slider_bounds();
-        this.$el.find(".horiz_slider").slider({
-          orientation: "horizontal",
-          animate: "fast",
-          slide: function(event, ui) {
-            return _this.x_slide(ui.value);
-          }
-        });
-        return this.x_slider_bounds(this.x_slice_min, this.x_slice_max);
-      };
-
-      return VolumeSlicerView;
-
-    })(ContinuumView.View);
-    VolumeSlicer = (function(_super) {
-      __extends(VolumeSlicer, _super);
-
-      function VolumeSlicer() {
-        _ref1 = VolumeSlicer.__super__.constructor.apply(this, arguments);
-        return _ref1;
-      }
-
-      VolumeSlicer.prototype.type = "VolumeSlicer";
-
-      VolumeSlicer.prototype.default_view = VolumeSlicerView;
-
-      return VolumeSlicer;
-
-    })(HasParent);
-    VolumeSlicers = (function(_super) {
-      __extends(VolumeSlicers, _super);
-
-      function VolumeSlicers() {
-        _ref2 = VolumeSlicers.__super__.constructor.apply(this, arguments);
-        return _ref2;
-      }
-
-      VolumeSlicers.prototype.model = VolumeSlicer;
-
-      return VolumeSlicers;
-
-    })(Backbone.Collection);
-    return {
-      "Model": VolumeSlicer,
-      "Collection": new VolumeSlicers(),
-      "View": VolumeSlicerView
-    };
-  });
-
-}).call(this);
-
-/*
-//@ sourceMappingURL=volumeslicer.js.map
-*/;
-define('widget/multiselecttemplate',[],function(){
-  var template = function(__obj) {
-  var _safe = function(value) {
-    if (typeof value === 'undefined' && value == null)
-      value = '';
-    var result = new String(value);
-    result.ecoSafe = true;
-    return result;
-  };
-  return (function() {
-    var __out = [], __self = this, _print = function(value) {
-      if (typeof value !== 'undefined' && value != null)
-        __out.push(value.ecoSafe ? value : __self.escape(value));
-    }, _capture = function(callback) {
-      var out = __out, result;
-      __out = [];
-      callback.call(this);
-      result = __out.join('');
-      __out = out;
-      return _safe(result);
-    };
-    (function() {
-      var option, _i, _len, _ref;
-    
-      _print(_safe('<label for="'));
-    
-      _print(this.id);
-    
-      _print(_safe('"> '));
-    
-      _print(this.title);
-    
-      _print(_safe(' </label>\n<select multiple class="bk-widget-form-input" id="'));
-    
-      _print(this.id);
-    
-      _print(_safe('" name="'));
-    
-      _print(this.name);
-    
-      _print(_safe('">\n  '));
-    
-      _ref = this.options;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        option = _ref[_i];
-        _print(_safe('\n  '));
-        if (option.value === this.value) {
-          _print(_safe('\n  <option selected="selected" value="'));
-          _print(option.value);
-          _print(_safe('">'));
-          _print(option.name);
-          _print(_safe('</option>\n  '));
-        } else {
-          _print(_safe('\n  <option value="'));
-          _print(option.value);
-          _print(_safe('">'));
-          _print(option.name);
-          _print(_safe('</option> \n  '));
-        }
-        _print(_safe('\n\n  '));
-      }
-    
-      _print(_safe('\n</select>\n'));
-    
-    }).call(this);
-    
-    return __out.join('');
-  }).call((function() {
-    var obj = {
-      escape: function(value) {
-        return ('' + value)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;');
-      },
-      safe: _safe
-    }, key;
-    for (key in __obj) obj[key] = __obj[key];
-    return obj;
-  })());
-};
-  return template;
-});
-
-(function() {
-  var __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-  define('widget/multiselect',["common/has_parent", "common/continuum_view", "backbone", "underscore", "./multiselecttemplate"], function(HasParent, continuum_view, Backbone, _, multiselecttemplate) {
-    var ContinuumView, MultiSelect, MultiSelectView, MultiSelects, multiselectboxes, _ref, _ref1, _ref2;
-    ContinuumView = continuum_view.View;
-    MultiSelectView = (function(_super) {
-      __extends(MultiSelectView, _super);
-
-      function MultiSelectView() {
-        _ref = MultiSelectView.__super__.constructor.apply(this, arguments);
-        return _ref;
-      }
-
-      MultiSelectView.prototype.events = {
-        "change select": "change_input"
-      };
-
-      MultiSelectView.prototype.change_input = function() {
-        this.mset('value', this.$('select').val(), {
-          'silent': true
-        });
-        return this.model.save();
-      };
-
-      MultiSelectView.prototype.tagName = "div";
-
-      MultiSelectView.prototype.template = multiselecttemplate;
-
-      MultiSelectView.prototype.initialize = function(options) {
-        MultiSelectView.__super__.initialize.call(this, options);
-        this.render();
-        this.listenTo(this.model, 'change:value', this.render_selection);
-        this.listenTo(this.model, 'change:options', this.render);
-        this.listenTo(this.model, 'change:name', this.render);
-        return this.listenTo(this.model, 'change:title', this.render);
-      };
-
-      MultiSelectView.prototype.render = function() {
-        var html;
-        this.$el.empty();
-        html = this.template(this.model.attributes);
-        this.$el.html(html);
-        this.render_selection();
-        return this;
-      };
-
-      MultiSelectView.prototype.render_selection = function() {
-        var values;
-        values = {};
-        _.map(this.mget('value'), function(x) {
-          return values[x] = true;
-        });
-        return this.$('option').each(function(el) {
-          el = $(el);
-          if (values[el.attr('value')]) {
-            return el.attr('selected', 'selected');
-          }
-        });
-      };
-
-      return MultiSelectView;
-
-    })(ContinuumView);
-    MultiSelect = (function(_super) {
-      __extends(MultiSelect, _super);
-
-      function MultiSelect() {
-        _ref1 = MultiSelect.__super__.constructor.apply(this, arguments);
-        return _ref1;
-      }
-
-      MultiSelect.prototype.type = "MultiSelect";
-
-      MultiSelect.prototype.default_view = MultiSelectView;
-
-      MultiSelect.prototype.defaults = function() {
-        var def;
-        def = {
-          title: '',
-          value: [],
-          options: []
-        };
-        return def;
-      };
-
-      return MultiSelect;
-
-    })(HasParent);
-    MultiSelects = (function(_super) {
-      __extends(MultiSelects, _super);
-
-      function MultiSelects() {
-        _ref2 = MultiSelects.__super__.constructor.apply(this, arguments);
-        return _ref2;
-      }
-
-      MultiSelects.prototype.model = MultiSelect;
-
-      return MultiSelects;
-
-    })(Backbone.Collection);
-    multiselectboxes = new MultiSelects();
-    return {
-      "Model": MultiSelect,
-      "Collection": multiselectboxes,
-      "View": MultiSelectView
-    };
-  });
-
-}).call(this);
-
-/*
-//@ sourceMappingURL=multiselect.js.map
-*/;
 (function(root) {
 define("jqrangeslider", ["jquery_ui/core","jquery_ui/widget","jquery_ui/mouse","jquery_mousewheel"], function() {
-  return (function() {
+      return (function() {
 /*! jQRangeSlider 5.7.0 - 2014-03-18 - Copyright (C) Guillaume Gautreau 2012 - MIT and GPLv3 licenses.*/!function(a){a.widget("ui.rangeSliderMouseTouch",a.ui.mouse,{enabled:!0,_mouseInit:function(){var b=this;a.ui.mouse.prototype._mouseInit.apply(this),this._mouseDownEvent=!1,this.element.bind("touchstart."+this.widgetName,function(a){return b._touchStart(a)})},_mouseDestroy:function(){a(document).unbind("touchmove."+this.widgetName,this._touchMoveDelegate).unbind("touchend."+this.widgetName,this._touchEndDelegate),a.ui.mouse.prototype._mouseDestroy.apply(this)},enable:function(){this.enabled=!0},disable:function(){this.enabled=!1},destroy:function(){this._mouseDestroy(),a.ui.mouse.prototype.destroy.apply(this),this._mouseInit=null},_touchStart:function(b){if(!this.enabled)return!1;b.which=1,b.preventDefault(),this._fillTouchEvent(b);var c=this,d=this._mouseDownEvent;this._mouseDown(b),d!==this._mouseDownEvent&&(this._touchEndDelegate=function(a){c._touchEnd(a)},this._touchMoveDelegate=function(a){c._touchMove(a)},a(document).bind("touchmove."+this.widgetName,this._touchMoveDelegate).bind("touchend."+this.widgetName,this._touchEndDelegate))},_mouseDown:function(b){return this.enabled?a.ui.mouse.prototype._mouseDown.apply(this,[b]):!1},_touchEnd:function(b){this._fillTouchEvent(b),this._mouseUp(b),a(document).unbind("touchmove."+this.widgetName,this._touchMoveDelegate).unbind("touchend."+this.widgetName,this._touchEndDelegate),this._mouseDownEvent=!1,a(document).trigger("mouseup")},_touchMove:function(a){return a.preventDefault(),this._fillTouchEvent(a),this._mouseMove(a)},_fillTouchEvent:function(a){var b;b="undefined"==typeof a.targetTouches&&"undefined"==typeof a.changedTouches?a.originalEvent.targetTouches[0]||a.originalEvent.changedTouches[0]:a.targetTouches[0]||a.changedTouches[0],a.pageX=b.pageX,a.pageY=b.pageY}})}(jQuery),function(a){a.widget("ui.rangeSliderDraggable",a.ui.rangeSliderMouseTouch,{cache:null,options:{containment:null},_create:function(){a.ui.rangeSliderMouseTouch.prototype._create.apply(this),setTimeout(a.proxy(this._initElementIfNotDestroyed,this),10)},destroy:function(){this.cache=null,a.ui.rangeSliderMouseTouch.prototype.destroy.apply(this)},_initElementIfNotDestroyed:function(){this._mouseInit&&this._initElement()},_initElement:function(){this._mouseInit(),this._cache()},_setOption:function(b,c){"containment"===b&&(this.options.containment=null===c||0===a(c).length?null:a(c))},_mouseStart:function(a){return this._cache(),this.cache.click={left:a.pageX,top:a.pageY},this.cache.initialOffset=this.element.offset(),this._triggerMouseEvent("mousestart"),!0},_mouseDrag:function(a){var b=a.pageX-this.cache.click.left;return b=this._constraintPosition(b+this.cache.initialOffset.left),this._applyPosition(b),this._triggerMouseEvent("sliderDrag"),!1},_mouseStop:function(){this._triggerMouseEvent("stop")},_constraintPosition:function(a){return 0!==this.element.parent().length&&null!==this.cache.parent.offset&&(a=Math.min(a,this.cache.parent.offset.left+this.cache.parent.width-this.cache.width.outer),a=Math.max(a,this.cache.parent.offset.left)),a},_applyPosition:function(a){var b={top:this.cache.offset.top,left:a};this.element.offset({left:a}),this.cache.offset=b},_cacheIfNecessary:function(){null===this.cache&&this._cache()},_cache:function(){this.cache={},this._cacheMargins(),this._cacheParent(),this._cacheDimensions(),this.cache.offset=this.element.offset()},_cacheMargins:function(){this.cache.margin={left:this._parsePixels(this.element,"marginLeft"),right:this._parsePixels(this.element,"marginRight"),top:this._parsePixels(this.element,"marginTop"),bottom:this._parsePixels(this.element,"marginBottom")}},_cacheParent:function(){if(null!==this.options.parent){var a=this.element.parent();this.cache.parent={offset:a.offset(),width:a.width()}}else this.cache.parent=null},_cacheDimensions:function(){this.cache.width={outer:this.element.outerWidth(),inner:this.element.width()}},_parsePixels:function(a,b){return parseInt(a.css(b),10)||0},_triggerMouseEvent:function(a){var b=this._prepareEventData();this.element.trigger(a,b)},_prepareEventData:function(){return{element:this.element,offset:this.cache.offset||null}}})}(jQuery),function(a,b){a.widget("ui.rangeSlider",{options:{bounds:{min:0,max:100},defaultValues:{min:20,max:50},wheelMode:null,wheelSpeed:4,arrows:!0,valueLabels:"show",formatter:null,durationIn:0,durationOut:400,delayOut:200,range:{min:!1,max:!1},step:!1,scales:!1,enabled:!0,symmetricPositionning:!1},_values:null,_valuesChanged:!1,_initialized:!1,bar:null,leftHandle:null,rightHandle:null,innerBar:null,container:null,arrows:null,labels:null,changing:{min:!1,max:!1},changed:{min:!1,max:!1},ruler:null,_create:function(){this._setDefaultValues(),this.labels={left:null,right:null,leftDisplayed:!0,rightDisplayed:!0},this.arrows={left:null,right:null},this.changing={min:!1,max:!1},this.changed={min:!1,max:!1},this._createElements(),this._bindResize(),setTimeout(a.proxy(this.resize,this),1),setTimeout(a.proxy(this._initValues,this),1)},_setDefaultValues:function(){this._values={min:this.options.defaultValues.min,max:this.options.defaultValues.max}},_bindResize:function(){var b=this;this._resizeProxy=function(a){b.resize(a)},a(window).resize(this._resizeProxy)},_initWidth:function(){this.container.css("width",this.element.width()-this.container.outerWidth(!0)+this.container.width()),this.innerBar.css("width",this.container.width()-this.innerBar.outerWidth(!0)+this.innerBar.width())},_initValues:function(){this._initialized=!0,this.values(this._values.min,this._values.max)},_setOption:function(a,b){this._setWheelOption(a,b),this._setArrowsOption(a,b),this._setLabelsOption(a,b),this._setLabelsDurations(a,b),this._setFormatterOption(a,b),this._setBoundsOption(a,b),this._setRangeOption(a,b),this._setStepOption(a,b),this._setScalesOption(a,b),this._setEnabledOption(a,b),this._setPositionningOption(a,b)},_validProperty:function(a,b,c){return null===a||"undefined"==typeof a[b]?c:a[b]},_setStepOption:function(a,b){"step"===a&&(this.options.step=b,this._leftHandle("option","step",b),this._rightHandle("option","step",b),this._changed(!0))},_setScalesOption:function(a,b){"scales"===a&&(b===!1||null===b?(this.options.scales=!1,this._destroyRuler()):b instanceof Array&&(this.options.scales=b,this._updateRuler()))},_setRangeOption:function(a,b){"range"===a&&(this._bar("option","range",b),this.options.range=this._bar("option","range"),this._changed(!0))},_setBoundsOption:function(a,b){"bounds"===a&&"undefined"!=typeof b.min&&"undefined"!=typeof b.max&&this.bounds(b.min,b.max)},_setWheelOption:function(a,b){("wheelMode"===a||"wheelSpeed"===a)&&(this._bar("option",a,b),this.options[a]=this._bar("option",a))},_setLabelsOption:function(a,b){if("valueLabels"===a){if("hide"!==b&&"show"!==b&&"change"!==b)return;this.options.valueLabels=b,"hide"!==b?(this._createLabels(),this._leftLabel("update"),this._rightLabel("update")):this._destroyLabels()}},_setFormatterOption:function(a,b){"formatter"===a&&null!==b&&"function"==typeof b&&"hide"!==this.options.valueLabels&&(this._leftLabel("option","formatter",b),this.options.formatter=this._rightLabel("option","formatter",b))},_setArrowsOption:function(a,b){"arrows"!==a||b!==!0&&b!==!1||b===this.options.arrows||(b===!0?(this.element.removeClass("ui-rangeSlider-noArrow").addClass("ui-rangeSlider-withArrows"),this.arrows.left.css("display","block"),this.arrows.right.css("display","block"),this.options.arrows=!0):b===!1&&(this.element.addClass("ui-rangeSlider-noArrow").removeClass("ui-rangeSlider-withArrows"),this.arrows.left.css("display","none"),this.arrows.right.css("display","none"),this.options.arrows=!1),this._initWidth())},_setLabelsDurations:function(a,b){if("durationIn"===a||"durationOut"===a||"delayOut"===a){if(parseInt(b,10)!==b)return;null!==this.labels.left&&this._leftLabel("option",a,b),null!==this.labels.right&&this._rightLabel("option",a,b),this.options[a]=b}},_setEnabledOption:function(a,b){"enabled"===a&&this.toggle(b)},_setPositionningOption:function(a,b){"symmetricPositionning"===a&&(this._rightHandle("option",a,b),this.options[a]=this._leftHandle("option",a,b))},_createElements:function(){"absolute"!==this.element.css("position")&&this.element.css("position","relative"),this.element.addClass("ui-rangeSlider"),this.container=a("<div class='ui-rangeSlider-container' />").css("position","absolute").appendTo(this.element),this.innerBar=a("<div class='ui-rangeSlider-innerBar' />").css("position","absolute").css("top",0).css("left",0),this._createHandles(),this._createBar(),this.container.prepend(this.innerBar),this._createArrows(),"hide"!==this.options.valueLabels?this._createLabels():this._destroyLabels(),this._updateRuler(),this.options.enabled||this._toggle(this.options.enabled)},_createHandle:function(b){return a("<div />")[this._handleType()](b).bind("sliderDrag",a.proxy(this._changing,this)).bind("stop",a.proxy(this._changed,this))},_createHandles:function(){this.leftHandle=this._createHandle({isLeft:!0,bounds:this.options.bounds,value:this._values.min,step:this.options.step,symmetricPositionning:this.options.symmetricPositionning}).appendTo(this.container),this.rightHandle=this._createHandle({isLeft:!1,bounds:this.options.bounds,value:this._values.max,step:this.options.step,symmetricPositionning:this.options.symmetricPositionning}).appendTo(this.container)},_createBar:function(){this.bar=a("<div />").prependTo(this.container).bind("sliderDrag scroll zoom",a.proxy(this._changing,this)).bind("stop",a.proxy(this._changed,this)),this._bar({leftHandle:this.leftHandle,rightHandle:this.rightHandle,values:{min:this._values.min,max:this._values.max},type:this._handleType(),range:this.options.range,wheelMode:this.options.wheelMode,wheelSpeed:this.options.wheelSpeed}),this.options.range=this._bar("option","range"),this.options.wheelMode=this._bar("option","wheelMode"),this.options.wheelSpeed=this._bar("option","wheelSpeed")},_createArrows:function(){this.arrows.left=this._createArrow("left"),this.arrows.right=this._createArrow("right"),this.options.arrows?this.element.addClass("ui-rangeSlider-withArrows"):(this.arrows.left.css("display","none"),this.arrows.right.css("display","none"),this.element.addClass("ui-rangeSlider-noArrow"))},_createArrow:function(b){var c,d=a("<div class='ui-rangeSlider-arrow' />").append("<div class='ui-rangeSlider-arrow-inner' />").addClass("ui-rangeSlider-"+b+"Arrow").css("position","absolute").css(b,0).appendTo(this.element);return c="right"===b?a.proxy(this._scrollRightClick,this):a.proxy(this._scrollLeftClick,this),d.bind("mousedown touchstart",c),d},_proxy:function(a,b,c){var d=Array.prototype.slice.call(c);return a&&a[b]?a[b].apply(a,d):null},_handleType:function(){return"rangeSliderHandle"},_barType:function(){return"rangeSliderBar"},_bar:function(){return this._proxy(this.bar,this._barType(),arguments)},_labelType:function(){return"rangeSliderLabel"},_leftLabel:function(){return this._proxy(this.labels.left,this._labelType(),arguments)},_rightLabel:function(){return this._proxy(this.labels.right,this._labelType(),arguments)},_leftHandle:function(){return this._proxy(this.leftHandle,this._handleType(),arguments)},_rightHandle:function(){return this._proxy(this.rightHandle,this._handleType(),arguments)},_getValue:function(a,b){return b===this.rightHandle&&(a-=b.outerWidth()),a*(this.options.bounds.max-this.options.bounds.min)/(this.container.innerWidth()-b.outerWidth(!0))+this.options.bounds.min},_trigger:function(a){var b=this;setTimeout(function(){b.element.trigger(a,{label:b.element,values:b.values()})},1)},_changing:function(){this._updateValues()&&(this._trigger("valuesChanging"),this._valuesChanged=!0)},_deactivateLabels:function(){"change"===this.options.valueLabels&&(this._leftLabel("option","show","hide"),this._rightLabel("option","show","hide"))},_reactivateLabels:function(){"change"===this.options.valueLabels&&(this._leftLabel("option","show","change"),this._rightLabel("option","show","change"))},_changed:function(a){a===!0&&this._deactivateLabels(),(this._updateValues()||this._valuesChanged)&&(this._trigger("valuesChanged"),a!==!0&&this._trigger("userValuesChanged"),this._valuesChanged=!1),a===!0&&this._reactivateLabels()},_updateValues:function(){var a=this._leftHandle("value"),b=this._rightHandle("value"),c=this._min(a,b),d=this._max(a,b),e=c!==this._values.min||d!==this._values.max;return this._values.min=this._min(a,b),this._values.max=this._max(a,b),e},_min:function(a,b){return Math.min(a,b)},_max:function(a,b){return Math.max(a,b)},_createLabel:function(b,c){var d;return null===b?(d=this._getLabelConstructorParameters(b,c),b=a("<div />").appendTo(this.element)[this._labelType()](d)):(d=this._getLabelRefreshParameters(b,c),b[this._labelType()](d)),b},_getLabelConstructorParameters:function(a,b){return{handle:b,handleType:this._handleType(),formatter:this._getFormatter(),show:this.options.valueLabels,durationIn:this.options.durationIn,durationOut:this.options.durationOut,delayOut:this.options.delayOut}},_getLabelRefreshParameters:function(){return{formatter:this._getFormatter(),show:this.options.valueLabels,durationIn:this.options.durationIn,durationOut:this.options.durationOut,delayOut:this.options.delayOut}},_getFormatter:function(){return this.options.formatter===!1||null===this.options.formatter?this._defaultFormatter:this.options.formatter},_defaultFormatter:function(a){return Math.round(a)},_destroyLabel:function(a){return null!==a&&(a[this._labelType()]("destroy"),a.remove(),a=null),a},_createLabels:function(){this.labels.left=this._createLabel(this.labels.left,this.leftHandle),this.labels.right=this._createLabel(this.labels.right,this.rightHandle),this._leftLabel("pair",this.labels.right)},_destroyLabels:function(){this.labels.left=this._destroyLabel(this.labels.left),this.labels.right=this._destroyLabel(this.labels.right)},_stepRatio:function(){return this._leftHandle("stepRatio")},_scrollRightClick:function(a){return this.options.enabled?(a.preventDefault(),this._bar("startScroll"),this._bindStopScroll(),this._continueScrolling("scrollRight",4*this._stepRatio(),1),void 0):!1},_continueScrolling:function(a,b,c,d){if(!this.options.enabled)return!1;this._bar(a,c),d=d||5,d--;var e=this,f=16,g=Math.max(1,4/this._stepRatio());this._scrollTimeout=setTimeout(function(){0===d&&(b>f?b=Math.max(f,b/1.5):c=Math.min(g,2*c),d=5),e._continueScrolling(a,b,c,d)},b)},_scrollLeftClick:function(a){return this.options.enabled?(a.preventDefault(),this._bar("startScroll"),this._bindStopScroll(),this._continueScrolling("scrollLeft",4*this._stepRatio(),1),void 0):!1},_bindStopScroll:function(){var b=this;this._stopScrollHandle=function(a){a.preventDefault(),b._stopScroll()},a(document).bind("mouseup touchend",this._stopScrollHandle)},_stopScroll:function(){a(document).unbind("mouseup touchend",this._stopScrollHandle),this._stopScrollHandle=null,this._bar("stopScroll"),clearTimeout(this._scrollTimeout)},_createRuler:function(){this.ruler=a("<div class='ui-rangeSlider-ruler' />").appendTo(this.innerBar)},_setRulerParameters:function(){this.ruler.ruler({min:this.options.bounds.min,max:this.options.bounds.max,scales:this.options.scales})},_destroyRuler:function(){null!==this.ruler&&a.fn.ruler&&(this.ruler.ruler("destroy"),this.ruler.remove(),this.ruler=null)},_updateRuler:function(){this._destroyRuler(),this.options.scales!==!1&&a.fn.ruler&&(this._createRuler(),this._setRulerParameters())},values:function(a,b){var c;if("undefined"!=typeof a&&"undefined"!=typeof b){if(!this._initialized)return this._values.min=a,this._values.max=b,this._values;this._deactivateLabels(),c=this._bar("values",a,b),this._changed(!0),this._reactivateLabels()}else c=this._bar("values",a,b);return c},min:function(a){return this._values.min=this.values(a,this._values.max).min,this._values.min},max:function(a){return this._values.max=this.values(this._values.min,a).max,this._values.max},bounds:function(a,b){return this._isValidValue(a)&&this._isValidValue(b)&&b>a&&(this._setBounds(a,b),this._updateRuler(),this._changed(!0)),this.options.bounds},_isValidValue:function(a){return"undefined"!=typeof a&&parseFloat(a)===a},_setBounds:function(a,b){this.options.bounds={min:a,max:b},this._leftHandle("option","bounds",this.options.bounds),this._rightHandle("option","bounds",this.options.bounds),this._bar("option","bounds",this.options.bounds)},zoomIn:function(a){this._bar("zoomIn",a)},zoomOut:function(a){this._bar("zoomOut",a)},scrollLeft:function(a){this._bar("startScroll"),this._bar("scrollLeft",a),this._bar("stopScroll")},scrollRight:function(a){this._bar("startScroll"),this._bar("scrollRight",a),this._bar("stopScroll")},resize:function(){this._initWidth(),this._leftHandle("update"),this._rightHandle("update"),this._bar("update")},enable:function(){this.toggle(!0)},disable:function(){this.toggle(!1)},toggle:function(a){a===b&&(a=!this.options.enabled),this.options.enabled!==a&&this._toggle(a)},_toggle:function(a){this.options.enabled=a,this.element.toggleClass("ui-rangeSlider-disabled",!a);var b=a?"enable":"disable";this._bar(b),this._leftHandle(b),this._rightHandle(b),this._leftLabel(b),this._rightLabel(b)},destroy:function(){this.element.removeClass("ui-rangeSlider-withArrows ui-rangeSlider-noArrow ui-rangeSlider-disabled"),this._destroyWidgets(),this._destroyElements(),this.element.removeClass("ui-rangeSlider"),this.options=null,a(window).unbind("resize",this._resizeProxy),this._resizeProxy=null,this._bindResize=null,a.Widget.prototype.destroy.apply(this,arguments)},_destroyWidget:function(a){this["_"+a]("destroy"),this[a].remove(),this[a]=null},_destroyWidgets:function(){this._destroyWidget("bar"),this._destroyWidget("leftHandle"),this._destroyWidget("rightHandle"),this._destroyRuler(),this._destroyLabels()},_destroyElements:function(){this.container.remove(),this.container=null,this.innerBar.remove(),this.innerBar=null,this.arrows.left.remove(),this.arrows.right.remove(),this.arrows=null}})}(jQuery),function(a){a.widget("ui.rangeSliderHandle",a.ui.rangeSliderDraggable,{currentMove:null,margin:0,parentElement:null,options:{isLeft:!0,bounds:{min:0,max:100},range:!1,value:0,step:!1},_value:0,_left:0,_create:function(){a.ui.rangeSliderDraggable.prototype._create.apply(this),this.element.css("position","absolute").css("top",0).addClass("ui-rangeSlider-handle").toggleClass("ui-rangeSlider-leftHandle",this.options.isLeft).toggleClass("ui-rangeSlider-rightHandle",!this.options.isLeft),this.element.append("<div class='ui-rangeSlider-handle-inner' />"),this._value=this._constraintValue(this.options.value)},destroy:function(){this.element.empty(),a.ui.rangeSliderDraggable.prototype.destroy.apply(this)},_setOption:function(b,c){"isLeft"!==b||c!==!0&&c!==!1||c===this.options.isLeft?"step"===b&&this._checkStep(c)?(this.options.step=c,this.update()):"bounds"===b?(this.options.bounds=c,this.update()):"range"===b&&this._checkRange(c)?(this.options.range=c,this.update()):"symmetricPositionning"===b&&(this.options.symmetricPositionning=c===!0,this.update()):(this.options.isLeft=c,this.element.toggleClass("ui-rangeSlider-leftHandle",this.options.isLeft).toggleClass("ui-rangeSlider-rightHandle",!this.options.isLeft),this._position(this._value),this.element.trigger("switch",this.options.isLeft)),a.ui.rangeSliderDraggable.prototype._setOption.apply(this,[b,c])},_checkRange:function(a){return a===!1||!this._isValidValue(a.min)&&!this._isValidValue(a.max)},_isValidValue:function(a){return"undefined"!=typeof a&&a!==!1&&parseFloat(a)!==a},_checkStep:function(a){return a===!1||parseFloat(a)===a},_initElement:function(){a.ui.rangeSliderDraggable.prototype._initElement.apply(this),0===this.cache.parent.width||null===this.cache.parent.width?setTimeout(a.proxy(this._initElementIfNotDestroyed,this),500):(this._position(this._value),this._triggerMouseEvent("initialize"))},_bounds:function(){return this.options.bounds},_cache:function(){a.ui.rangeSliderDraggable.prototype._cache.apply(this),this._cacheParent()},_cacheParent:function(){var a=this.element.parent();this.cache.parent={element:a,offset:a.offset(),padding:{left:this._parsePixels(a,"paddingLeft")},width:a.width()}},_position:function(a){var b=this._getPositionForValue(a);this._applyPosition(b)},_constraintPosition:function(a){var b=this._getValueForPosition(a);return this._getPositionForValue(b)},_applyPosition:function(b){a.ui.rangeSliderDraggable.prototype._applyPosition.apply(this,[b]),this._left=b,this._setValue(this._getValueForPosition(b)),this._triggerMouseEvent("moving")},_prepareEventData:function(){var b=a.ui.rangeSliderDraggable.prototype._prepareEventData.apply(this);return b.value=this._value,b},_setValue:function(a){a!==this._value&&(this._value=a)},_constraintValue:function(a){if(a=Math.min(a,this._bounds().max),a=Math.max(a,this._bounds().min),a=this._round(a),this.options.range!==!1){var b=this.options.range.min||!1,c=this.options.range.max||!1;b!==!1&&(a=Math.max(a,this._round(b))),c!==!1&&(a=Math.min(a,this._round(c))),a=Math.min(a,this._bounds().max),a=Math.max(a,this._bounds().min)}return a},_round:function(a){return this.options.step!==!1&&this.options.step>0?Math.round(a/this.options.step)*this.options.step:a},_getPositionForValue:function(a){if(!this.cache||!this.cache.parent||null===this.cache.parent.offset)return 0;a=this._constraintValue(a);var b=(a-this.options.bounds.min)/(this.options.bounds.max-this.options.bounds.min),c=this.cache.parent.width,d=this.cache.parent.offset.left,e=this.options.isLeft?0:this.cache.width.outer;return this.options.symmetricPositionning?b*(c-2*this.cache.width.outer)+d+e:b*c+d-e},_getValueForPosition:function(a){var b=this._getRawValueForPositionAndBounds(a,this.options.bounds.min,this.options.bounds.max);return this._constraintValue(b)},_getRawValueForPositionAndBounds:function(a,b,c){var d,e,f=null===this.cache.parent.offset?0:this.cache.parent.offset.left;return this.options.symmetricPositionning?(a-=this.options.isLeft?0:this.cache.width.outer,d=this.cache.parent.width-2*this.cache.width.outer):(a+=this.options.isLeft?0:this.cache.width.outer,d=this.cache.parent.width),0===d?this._value:(e=(a-f)/d,e*(c-b)+b)},value:function(a){return"undefined"!=typeof a&&(this._cache(),a=this._constraintValue(a),this._position(a)),this._value},update:function(){this._cache();var a=this._constraintValue(this._value),b=this._getPositionForValue(a);a!==this._value?(this._triggerMouseEvent("updating"),this._position(a),this._triggerMouseEvent("update")):b!==this.cache.offset.left&&(this._triggerMouseEvent("updating"),this._position(a),this._triggerMouseEvent("update"))},position:function(a){return"undefined"!=typeof a&&(this._cache(),a=this._constraintPosition(a),this._applyPosition(a)),this._left},add:function(a,b){return a+b},substract:function(a,b){return a-b},stepsBetween:function(a,b){return this.options.step===!1?b-a:(b-a)/this.options.step},multiplyStep:function(a,b){return a*b},moveRight:function(a){var b;return this.options.step===!1?(b=this._left,this.position(this._left+a),this._left-b):(b=this._value,this.value(this.add(b,this.multiplyStep(this.options.step,a))),this.stepsBetween(b,this._value))},moveLeft:function(a){return-this.moveRight(-a)},stepRatio:function(){if(this.options.step===!1)return 1;var a=(this.options.bounds.max-this.options.bounds.min)/this.options.step;return this.cache.parent.width/a}})}(jQuery),function(a){function b(a,b){return"undefined"==typeof a?b||!1:a}a.widget("ui.rangeSliderBar",a.ui.rangeSliderDraggable,{options:{leftHandle:null,rightHandle:null,bounds:{min:0,max:100},type:"rangeSliderHandle",range:!1,drag:function(){},stop:function(){},values:{min:0,max:20},wheelSpeed:4,wheelMode:null},_values:{min:0,max:20},_waitingToInit:2,_wheelTimeout:!1,_create:function(){a.ui.rangeSliderDraggable.prototype._create.apply(this),this.element.css("position","absolute").css("top",0).addClass("ui-rangeSlider-bar"),this.options.leftHandle.bind("initialize",a.proxy(this._onInitialized,this)).bind("mousestart",a.proxy(this._cache,this)).bind("stop",a.proxy(this._onHandleStop,this)),this.options.rightHandle.bind("initialize",a.proxy(this._onInitialized,this)).bind("mousestart",a.proxy(this._cache,this)).bind("stop",a.proxy(this._onHandleStop,this)),this._bindHandles(),this._values=this.options.values,this._setWheelModeOption(this.options.wheelMode)},destroy:function(){this.options.leftHandle.unbind(".bar"),this.options.rightHandle.unbind(".bar"),this.options=null,a.ui.rangeSliderDraggable.prototype.destroy.apply(this)},_setOption:function(a,b){"range"===a?this._setRangeOption(b):"wheelSpeed"===a?this._setWheelSpeedOption(b):"wheelMode"===a&&this._setWheelModeOption(b)},_setRangeOption:function(a){if(("object"!=typeof a||null===a)&&(a=!1),a!==!1||this.options.range!==!1){if(a!==!1){var c=b(a.min,this.options.range.min),d=b(a.max,this.options.range.max);this.options.range={min:c,max:d}}else this.options.range=!1;this._setLeftRange(),this._setRightRange()}},_setWheelSpeedOption:function(a){"number"==typeof a&&a>0&&(this.options.wheelSpeed=a)},_setWheelModeOption:function(a){(null===a||a===!1||"zoom"===a||"scroll"===a)&&(this.options.wheelMode!==a&&this.element.parent().unbind("mousewheel.bar"),this._bindMouseWheel(a),this.options.wheelMode=a)},_bindMouseWheel:function(b){"zoom"===b?this.element.parent().bind("mousewheel.bar",a.proxy(this._mouseWheelZoom,this)):"scroll"===b&&this.element.parent().bind("mousewheel.bar",a.proxy(this._mouseWheelScroll,this))},_setLeftRange:function(){if(this.options.range===!1)return!1;var a=this._values.max,b={min:!1,max:!1};b.max="undefined"!=typeof this.options.range.min&&this.options.range.min!==!1?this._leftHandle("substract",a,this.options.range.min):!1,b.min="undefined"!=typeof this.options.range.max&&this.options.range.max!==!1?this._leftHandle("substract",a,this.options.range.max):!1,this._leftHandle("option","range",b)},_setRightRange:function(){var a=this._values.min,b={min:!1,max:!1};b.min="undefined"!=typeof this.options.range.min&&this.options.range.min!==!1?this._rightHandle("add",a,this.options.range.min):!1,b.max="undefined"!=typeof this.options.range.max&&this.options.range.max!==!1?this._rightHandle("add",a,this.options.range.max):!1,this._rightHandle("option","range",b)},_deactivateRange:function(){this._leftHandle("option","range",!1),this._rightHandle("option","range",!1)},_reactivateRange:function(){this._setRangeOption(this.options.range)},_onInitialized:function(){this._waitingToInit--,0===this._waitingToInit&&this._initMe()},_initMe:function(){this._cache(),this.min(this._values.min),this.max(this._values.max);var a=this._leftHandle("position"),b=this._rightHandle("position")+this.options.rightHandle.width();this.element.offset({left:a}),this.element.css("width",b-a)},_leftHandle:function(){return this._handleProxy(this.options.leftHandle,arguments)},_rightHandle:function(){return this._handleProxy(this.options.rightHandle,arguments)},_handleProxy:function(a,b){var c=Array.prototype.slice.call(b);return a[this.options.type].apply(a,c)},_cache:function(){a.ui.rangeSliderDraggable.prototype._cache.apply(this),this._cacheHandles()},_cacheHandles:function(){this.cache.rightHandle={},this.cache.rightHandle.width=this.options.rightHandle.width(),this.cache.rightHandle.offset=this.options.rightHandle.offset(),this.cache.leftHandle={},this.cache.leftHandle.offset=this.options.leftHandle.offset()},_mouseStart:function(b){a.ui.rangeSliderDraggable.prototype._mouseStart.apply(this,[b]),this._deactivateRange()},_mouseStop:function(b){a.ui.rangeSliderDraggable.prototype._mouseStop.apply(this,[b]),this._cacheHandles(),this._values.min=this._leftHandle("value"),this._values.max=this._rightHandle("value"),this._reactivateRange(),this._leftHandle().trigger("stop"),this._rightHandle().trigger("stop")},_onDragLeftHandle:function(a,b){if(this._cacheIfNecessary(),b.element[0]===this.options.leftHandle[0]){if(this._switchedValues())return this._switchHandles(),this._onDragRightHandle(a,b),void 0;this._values.min=b.value,this.cache.offset.left=b.offset.left,this.cache.leftHandle.offset=b.offset,this._positionBar()}},_onDragRightHandle:function(a,b){if(this._cacheIfNecessary(),b.element[0]===this.options.rightHandle[0]){if(this._switchedValues())return this._switchHandles(),this._onDragLeftHandle(a,b),void 0;this._values.max=b.value,this.cache.rightHandle.offset=b.offset,this._positionBar()}},_positionBar:function(){var a=this.cache.rightHandle.offset.left+this.cache.rightHandle.width-this.cache.leftHandle.offset.left;this.cache.width.inner=a,this.element.css("width",a).offset({left:this.cache.leftHandle.offset.left})},_onHandleStop:function(){this._setLeftRange(),this._setRightRange()},_switchedValues:function(){if(this.min()>this.max()){var a=this._values.min;return this._values.min=this._values.max,this._values.max=a,!0}return!1},_switchHandles:function(){var a=this.options.leftHandle;this.options.leftHandle=this.options.rightHandle,this.options.rightHandle=a,this._leftHandle("option","isLeft",!0),this._rightHandle("option","isLeft",!1),this._bindHandles(),this._cacheHandles()},_bindHandles:function(){this.options.leftHandle.unbind(".bar").bind("sliderDrag.bar update.bar moving.bar",a.proxy(this._onDragLeftHandle,this)),this.options.rightHandle.unbind(".bar").bind("sliderDrag.bar update.bar moving.bar",a.proxy(this._onDragRightHandle,this))},_constraintPosition:function(b){var c,d={};return d.left=a.ui.rangeSliderDraggable.prototype._constraintPosition.apply(this,[b]),d.left=this._leftHandle("position",d.left),c=this._rightHandle("position",d.left+this.cache.width.outer-this.cache.rightHandle.width),d.width=c-d.left+this.cache.rightHandle.width,d},_applyPosition:function(b){a.ui.rangeSliderDraggable.prototype._applyPosition.apply(this,[b.left]),this.element.width(b.width)},_mouseWheelZoom:function(b,c,d,e){if(!this.enabled)return!1;var f=this._values.min+(this._values.max-this._values.min)/2,g={},h={};return this.options.range===!1||this.options.range.min===!1?(g.max=f,h.min=f):(g.max=f-this.options.range.min/2,h.min=f+this.options.range.min/2),this.options.range!==!1&&this.options.range.max!==!1&&(g.min=f-this.options.range.max/2,h.max=f+this.options.range.max/2),this._leftHandle("option","range",g),this._rightHandle("option","range",h),clearTimeout(this._wheelTimeout),this._wheelTimeout=setTimeout(a.proxy(this._wheelStop,this),200),this.zoomIn(e*this.options.wheelSpeed),!1},_mouseWheelScroll:function(b,c,d,e){return this.enabled?(this._wheelTimeout===!1?this.startScroll():clearTimeout(this._wheelTimeout),this._wheelTimeout=setTimeout(a.proxy(this._wheelStop,this),200),this.scrollLeft(e*this.options.wheelSpeed),!1):!1},_wheelStop:function(){this.stopScroll(),this._wheelTimeout=!1},min:function(a){return this._leftHandle("value",a)},max:function(a){return this._rightHandle("value",a)},startScroll:function(){this._deactivateRange()},stopScroll:function(){this._reactivateRange(),this._triggerMouseEvent("stop"),this._leftHandle().trigger("stop"),this._rightHandle().trigger("stop")},scrollLeft:function(a){return a=a||1,0>a?this.scrollRight(-a):(a=this._leftHandle("moveLeft",a),this._rightHandle("moveLeft",a),this.update(),this._triggerMouseEvent("scroll"),void 0)},scrollRight:function(a){return a=a||1,0>a?this.scrollLeft(-a):(a=this._rightHandle("moveRight",a),this._leftHandle("moveRight",a),this.update(),this._triggerMouseEvent("scroll"),void 0)},zoomIn:function(a){if(a=a||1,0>a)return this.zoomOut(-a);var b=this._rightHandle("moveLeft",a);a>b&&(b/=2,this._rightHandle("moveRight",b)),this._leftHandle("moveRight",b),this.update(),this._triggerMouseEvent("zoom")},zoomOut:function(a){if(a=a||1,0>a)return this.zoomIn(-a);var b=this._rightHandle("moveRight",a);a>b&&(b/=2,this._rightHandle("moveLeft",b)),this._leftHandle("moveLeft",b),this.update(),this._triggerMouseEvent("zoom")},values:function(a,b){if("undefined"!=typeof a&&"undefined"!=typeof b){var c=Math.min(a,b),d=Math.max(a,b);this._deactivateRange(),this.options.leftHandle.unbind(".bar"),this.options.rightHandle.unbind(".bar"),this._values.min=this._leftHandle("value",c),this._values.max=this._rightHandle("value",d),this._bindHandles(),this._reactivateRange(),this.update()
-}return{min:this._values.min,max:this._values.max}},update:function(){this._values.min=this.min(),this._values.max=this.max(),this._cache(),this._positionBar()}})}(jQuery),function(a){function b(b,c,d,e){this.label1=b,this.label2=c,this.type=d,this.options=e,this.handle1=this.label1[this.type]("option","handle"),this.handle2=this.label2[this.type]("option","handle"),this.cache=null,this.left=b,this.right=c,this.moving=!1,this.initialized=!1,this.updating=!1,this.Init=function(){this.BindHandle(this.handle1),this.BindHandle(this.handle2),"show"===this.options.show?(setTimeout(a.proxy(this.PositionLabels,this),1),this.initialized=!0):setTimeout(a.proxy(this.AfterInit,this),1e3),this._resizeProxy=a.proxy(this.onWindowResize,this),a(window).resize(this._resizeProxy)},this.Destroy=function(){this._resizeProxy&&(a(window).unbind("resize",this._resizeProxy),this._resizeProxy=null,this.handle1.unbind(".positionner"),this.handle1=null,this.handle2.unbind(".positionner"),this.handle2=null,this.label1=null,this.label2=null,this.left=null,this.right=null),this.cache=null},this.AfterInit=function(){this.initialized=!0},this.Cache=function(){"none"!==this.label1.css("display")&&(this.cache={},this.cache.label1={},this.cache.label2={},this.cache.handle1={},this.cache.handle2={},this.cache.offsetParent={},this.CacheElement(this.label1,this.cache.label1),this.CacheElement(this.label2,this.cache.label2),this.CacheElement(this.handle1,this.cache.handle1),this.CacheElement(this.handle2,this.cache.handle2),this.CacheElement(this.label1.offsetParent(),this.cache.offsetParent))},this.CacheIfNecessary=function(){null===this.cache?this.Cache():(this.CacheWidth(this.label1,this.cache.label1),this.CacheWidth(this.label2,this.cache.label2),this.CacheHeight(this.label1,this.cache.label1),this.CacheHeight(this.label2,this.cache.label2),this.CacheWidth(this.label1.offsetParent(),this.cache.offsetParent))},this.CacheElement=function(a,b){this.CacheWidth(a,b),this.CacheHeight(a,b),b.offset=a.offset(),b.margin={left:this.ParsePixels("marginLeft",a),right:this.ParsePixels("marginRight",a)},b.border={left:this.ParsePixels("borderLeftWidth",a),right:this.ParsePixels("borderRightWidth",a)}},this.CacheWidth=function(a,b){b.width=a.width(),b.outerWidth=a.outerWidth()},this.CacheHeight=function(a,b){b.outerHeightMargin=a.outerHeight(!0)},this.ParsePixels=function(a,b){return parseInt(b.css(a),10)||0},this.BindHandle=function(b){b.bind("updating.positionner",a.proxy(this.onHandleUpdating,this)),b.bind("update.positionner",a.proxy(this.onHandleUpdated,this)),b.bind("moving.positionner",a.proxy(this.onHandleMoving,this)),b.bind("stop.positionner",a.proxy(this.onHandleStop,this))},this.PositionLabels=function(){if(this.CacheIfNecessary(),null!==this.cache){var a=this.GetRawPosition(this.cache.label1,this.cache.handle1),b=this.GetRawPosition(this.cache.label2,this.cache.handle2);this.label1[d]("option","isLeft")?this.ConstraintPositions(a,b):this.ConstraintPositions(b,a),this.PositionLabel(this.label1,a.left,this.cache.label1),this.PositionLabel(this.label2,b.left,this.cache.label2)}},this.PositionLabel=function(a,b,c){var d,e,f,g=this.cache.offsetParent.offset.left+this.cache.offsetParent.border.left;g-b>=0?(a.css("right",""),a.offset({left:b})):(d=g+this.cache.offsetParent.width,e=b+c.margin.left+c.outerWidth+c.margin.right,f=d-e,a.css("left",""),a.css("right",f))},this.ConstraintPositions=function(a,b){(a.center<b.center&&a.outerRight>b.outerLeft||a.center>b.center&&b.outerRight>a.outerLeft)&&(a=this.getLeftPosition(a,b),b=this.getRightPosition(a,b))},this.getLeftPosition=function(a,b){var c=(b.center+a.center)/2,d=c-a.cache.outerWidth-a.cache.margin.right+a.cache.border.left;return a.left=d,a},this.getRightPosition=function(a,b){var c=(b.center+a.center)/2;return b.left=c+b.cache.margin.left+b.cache.border.left,b},this.ShowIfNecessary=function(){"show"===this.options.show||this.moving||!this.initialized||this.updating||(this.label1.stop(!0,!0).fadeIn(this.options.durationIn||0),this.label2.stop(!0,!0).fadeIn(this.options.durationIn||0),this.moving=!0)},this.HideIfNeeded=function(){this.moving===!0&&(this.label1.stop(!0,!0).delay(this.options.delayOut||0).fadeOut(this.options.durationOut||0),this.label2.stop(!0,!0).delay(this.options.delayOut||0).fadeOut(this.options.durationOut||0),this.moving=!1)},this.onHandleMoving=function(a,b){this.ShowIfNecessary(),this.CacheIfNecessary(),this.UpdateHandlePosition(b),this.PositionLabels()},this.onHandleUpdating=function(){this.updating=!0},this.onHandleUpdated=function(){this.updating=!1,this.cache=null},this.onHandleStop=function(){this.HideIfNeeded()},this.onWindowResize=function(){this.cache=null},this.UpdateHandlePosition=function(a){null!==this.cache&&(a.element[0]===this.handle1[0]?this.UpdatePosition(a,this.cache.handle1):this.UpdatePosition(a,this.cache.handle2))},this.UpdatePosition=function(a,b){b.offset=a.offset,b.value=a.value},this.GetRawPosition=function(a,b){var c=b.offset.left+b.outerWidth/2,d=c-a.outerWidth/2,e=d+a.outerWidth-a.border.left-a.border.right,f=d-a.margin.left-a.border.left,g=b.offset.top-a.outerHeightMargin;return{left:d,outerLeft:f,top:g,right:e,outerRight:f+a.outerWidth+a.margin.left+a.margin.right,cache:a,center:c}},this.Init()}a.widget("ui.rangeSliderLabel",a.ui.rangeSliderMouseTouch,{options:{handle:null,formatter:!1,handleType:"rangeSliderHandle",show:"show",durationIn:0,durationOut:500,delayOut:500,isLeft:!1},cache:null,_positionner:null,_valueContainer:null,_innerElement:null,_value:null,_create:function(){this.options.isLeft=this._handle("option","isLeft"),this.element.addClass("ui-rangeSlider-label").css("position","absolute").css("display","block"),this._createElements(),this._toggleClass(),this.options.handle.bind("moving.label",a.proxy(this._onMoving,this)).bind("update.label",a.proxy(this._onUpdate,this)).bind("switch.label",a.proxy(this._onSwitch,this)),"show"!==this.options.show&&this.element.hide(),this._mouseInit()},destroy:function(){this.options.handle.unbind(".label"),this.options.handle=null,this._valueContainer=null,this._innerElement=null,this.element.empty(),this._positionner&&(this._positionner.Destroy(),this._positionner=null),a.ui.rangeSliderMouseTouch.prototype.destroy.apply(this)},_createElements:function(){this._valueContainer=a("<div class='ui-rangeSlider-label-value' />").appendTo(this.element),this._innerElement=a("<div class='ui-rangeSlider-label-inner' />").appendTo(this.element)},_handle:function(){var a=Array.prototype.slice.apply(arguments);return this.options.handle[this.options.handleType].apply(this.options.handle,a)},_setOption:function(a,b){"show"===a?this._updateShowOption(b):("durationIn"===a||"durationOut"===a||"delayOut"===a)&&this._updateDurations(a,b),this._setFormatterOption(a,b)},_setFormatterOption:function(a,b){"formatter"===a&&("function"==typeof b||b===!1)&&(this.options.formatter=b,this._display(this._value))},_updateShowOption:function(a){this.options.show=a,"show"!==this.options.show?(this.element.hide(),this._positionner.moving=!1):(this.element.show(),this._display(this.options.handle[this.options.handleType]("value")),this._positionner.PositionLabels()),this._positionner.options.show=this.options.show},_updateDurations:function(a,b){parseInt(b,10)===b&&(this._positionner.options[a]=b,this.options[a]=b)},_display:function(a){this.options.formatter===!1?this._displayText(Math.round(a)):this._displayText(this.options.formatter(a)),this._value=a},_displayText:function(a){this._valueContainer.text(a)},_toggleClass:function(){this.element.toggleClass("ui-rangeSlider-leftLabel",this.options.isLeft).toggleClass("ui-rangeSlider-rightLabel",!this.options.isLeft)},_positionLabels:function(){this._positionner.PositionLabels()},_mouseDown:function(a){this.options.handle.trigger(a)},_mouseUp:function(a){this.options.handle.trigger(a)},_mouseMove:function(a){this.options.handle.trigger(a)},_onMoving:function(a,b){this._display(b.value)},_onUpdate:function(){"show"===this.options.show&&this.update()},_onSwitch:function(a,b){this.options.isLeft=b,this._toggleClass(),this._positionLabels()},pair:function(a){null===this._positionner&&(this._positionner=new b(this.element,a,this.widgetName,{show:this.options.show,durationIn:this.options.durationIn,durationOut:this.options.durationOut,delayOut:this.options.delayOut}),a[this.widgetName]("positionner",this._positionner))},positionner:function(a){return"undefined"!=typeof a&&(this._positionner=a),this._positionner},update:function(){this._positionner.cache=null,this._display(this._handle("value")),"show"===this.options.show&&this._positionLabels()}})}(jQuery),function(a){a.widget("ui.dateRangeSlider",a.ui.rangeSlider,{options:{bounds:{min:new Date(2010,0,1).valueOf(),max:new Date(2012,0,1).valueOf()},defaultValues:{min:new Date(2010,1,11).valueOf(),max:new Date(2011,1,11).valueOf()}},_create:function(){a.ui.rangeSlider.prototype._create.apply(this),this.element.addClass("ui-dateRangeSlider")},destroy:function(){this.element.removeClass("ui-dateRangeSlider"),a.ui.rangeSlider.prototype.destroy.apply(this)},_setDefaultValues:function(){this._values={min:this.options.defaultValues.min.valueOf(),max:this.options.defaultValues.max.valueOf()}},_setRulerParameters:function(){this.ruler.ruler({min:new Date(this.options.bounds.min),max:new Date(this.options.bounds.max),scales:this.options.scales})},_setOption:function(b,c){("defaultValues"===b||"bounds"===b)&&"undefined"!=typeof c&&null!==c&&this._isValidDate(c.min)&&this._isValidDate(c.max)?a.ui.rangeSlider.prototype._setOption.apply(this,[b,{min:c.min.valueOf(),max:c.max.valueOf()}]):a.ui.rangeSlider.prototype._setOption.apply(this,this._toArray(arguments))},_handleType:function(){return"dateRangeSliderHandle"},option:function(b){if("bounds"===b||"defaultValues"===b){var c=a.ui.rangeSlider.prototype.option.apply(this,arguments);return{min:new Date(c.min),max:new Date(c.max)}}return a.ui.rangeSlider.prototype.option.apply(this,this._toArray(arguments))},_defaultFormatter:function(a){var b=a.getMonth()+1,c=a.getDate();return""+a.getFullYear()+"-"+(10>b?"0"+b:b)+"-"+(10>c?"0"+c:c)},_getFormatter:function(){var a=this.options.formatter;return(this.options.formatter===!1||null===this.options.formatter)&&(a=this._defaultFormatter),function(a){return function(b){return a(new Date(b))}}(a)},values:function(b,c){var d=null;return d=this._isValidDate(b)&&this._isValidDate(c)?a.ui.rangeSlider.prototype.values.apply(this,[b.valueOf(),c.valueOf()]):a.ui.rangeSlider.prototype.values.apply(this,this._toArray(arguments)),{min:new Date(d.min),max:new Date(d.max)}},min:function(b){return this._isValidDate(b)?new Date(a.ui.rangeSlider.prototype.min.apply(this,[b.valueOf()])):new Date(a.ui.rangeSlider.prototype.min.apply(this))},max:function(b){return this._isValidDate(b)?new Date(a.ui.rangeSlider.prototype.max.apply(this,[b.valueOf()])):new Date(a.ui.rangeSlider.prototype.max.apply(this))},bounds:function(b,c){var d;return d=this._isValidDate(b)&&this._isValidDate(c)?a.ui.rangeSlider.prototype.bounds.apply(this,[b.valueOf(),c.valueOf()]):a.ui.rangeSlider.prototype.bounds.apply(this,this._toArray(arguments)),{min:new Date(d.min),max:new Date(d.max)}},_isValidDate:function(a){return"undefined"!=typeof a&&a instanceof Date},_toArray:function(a){return Array.prototype.slice.call(a)}})}(jQuery),function(a){a.widget("ui.dateRangeSliderHandle",a.ui.rangeSliderHandle,{_steps:!1,_boundsValues:{},_create:function(){this._createBoundsValues(),a.ui.rangeSliderHandle.prototype._create.apply(this)},_getValueForPosition:function(a){var b=this._getRawValueForPositionAndBounds(a,this.options.bounds.min.valueOf(),this.options.bounds.max.valueOf());return this._constraintValue(new Date(b))},_setOption:function(b,c){return"step"===b?(this.options.step=c,this._createSteps(),this.update(),void 0):(a.ui.rangeSliderHandle.prototype._setOption.apply(this,[b,c]),"bounds"===b&&this._createBoundsValues(),void 0)},_createBoundsValues:function(){this._boundsValues={min:this.options.bounds.min.valueOf(),max:this.options.bounds.max.valueOf()}},_bounds:function(){return this._boundsValues},_createSteps:function(){if(this.options.step===!1||!this._isValidStep())return this._steps=!1,void 0;var a=new Date(this.options.bounds.min),b=new Date(this.options.bounds.max),c=a,d=0,e=new Date;for(this._steps=[];b>=c&&(1===d||e.valueOf()!==c.valueOf());)e=c,this._steps.push(c.valueOf()),c=this._addStep(a,d,this.options.step),d++;e.valueOf()===c.valueOf()&&(this._steps=!1)},_isValidStep:function(){return"object"==typeof this.options.step},_addStep:function(a,b,c){var d=new Date(a.valueOf());return d=this._addThing(d,"FullYear",b,c.years),d=this._addThing(d,"Month",b,c.months),d=this._addThing(d,"Date",b,7*c.weeks),d=this._addThing(d,"Date",b,c.days),d=this._addThing(d,"Hours",b,c.hours),d=this._addThing(d,"Minutes",b,c.minutes),d=this._addThing(d,"Seconds",b,c.seconds)},_addThing:function(a,b,c,d){return 0===c||0===(d||0)?a:(a["set"+b](a["get"+b]()+c*(d||0)),a)},_round:function(a){if(this._steps===!1)return a;for(var b,c,d=this.options.bounds.max.valueOf(),e=this.options.bounds.min.valueOf(),f=Math.max(0,(a-e)/(d-e)),g=Math.floor(this._steps.length*f);this._steps[g]>a;)g--;for(;g+1<this._steps.length&&this._steps[g+1]<=a;)g++;return g>=this._steps.length-1?this._steps[this._steps.length-1]:0===g?this._steps[0]:(b=this._steps[g],c=this._steps[g+1],c-a>a-b?b:c)},update:function(){this._createBoundsValues(),this._createSteps(),a.ui.rangeSliderHandle.prototype.update.apply(this)},add:function(a,b){return this._addStep(new Date(a),1,b).valueOf()},substract:function(a,b){return this._addStep(new Date(a),-1,b).valueOf()},stepsBetween:function(a,b){if(this.options.step===!1)return b-a;var c=Math.min(a,b),d=Math.max(a,b),e=0,f=!1,g=a>b;for(this.add(c,this.options.step)-c<0&&(f=!0);d>c;)f?d=this.add(d,this.options.step):c=this.add(c,this.options.step),e++;return g?-e:e},multiplyStep:function(a,b){var c={};for(var d in a)a.hasOwnProperty(d)&&(c[d]=a[d]*b);return c},stepRatio:function(){if(this.options.step===!1)return 1;var a=this._steps.length;return this.cache.parent.width/a}})}(jQuery),function(a){a.widget("ui.editRangeSlider",a.ui.rangeSlider,{options:{type:"text",round:1},_create:function(){a.ui.rangeSlider.prototype._create.apply(this),this.element.addClass("ui-editRangeSlider")},destroy:function(){this.element.removeClass("ui-editRangeSlider"),a.ui.rangeSlider.prototype.destroy.apply(this)},_setOption:function(b,c){("type"===b||"step"===b)&&this._setLabelOption(b,c),"type"===b&&(this.options[b]=null===this.labels.left?c:this._leftLabel("option",b)),a.ui.rangeSlider.prototype._setOption.apply(this,[b,c])},_setLabelOption:function(a,b){null!==this.labels.left&&(this._leftLabel("option",a,b),this._rightLabel("option",a,b))},_labelType:function(){return"editRangeSliderLabel"},_createLabel:function(b,c){var d=a.ui.rangeSlider.prototype._createLabel.apply(this,[b,c]);return null===b&&d.bind("valueChange",a.proxy(this._onValueChange,this)),d},_addPropertiesToParameter:function(a){return a.type=this.options.type,a.step=this.options.step,a.id=this.element.attr("id"),a},_getLabelConstructorParameters:function(b,c){var d=a.ui.rangeSlider.prototype._getLabelConstructorParameters.apply(this,[b,c]);return this._addPropertiesToParameter(d)},_getLabelRefreshParameters:function(b,c){var d=a.ui.rangeSlider.prototype._getLabelRefreshParameters.apply(this,[b,c]);return this._addPropertiesToParameter(d)},_onValueChange:function(a,b){var c=!1;c=b.isLeft?this._values.min!==this.min(b.value):this._values.max!==this.max(b.value),c&&this._trigger("userValuesChanged")}})}(jQuery),function(a){a.widget("ui.editRangeSliderLabel",a.ui.rangeSliderLabel,{options:{type:"text",step:!1,id:""},_input:null,_text:"",_create:function(){a.ui.rangeSliderLabel.prototype._create.apply(this),this._createInput()},_setOption:function(b,c){"type"===b?this._setTypeOption(c):"step"===b&&this._setStepOption(c),a.ui.rangeSliderLabel.prototype._setOption.apply(this,[b,c])},_createInput:function(){this._input=a("<input type='"+this.options.type+"' />").addClass("ui-editRangeSlider-inputValue").appendTo(this._valueContainer),this._setInputName(),this._input.bind("keyup",a.proxy(this._onKeyUp,this)),this._input.blur(a.proxy(this._onChange,this)),"number"===this.options.type&&(this.options.step!==!1&&this._input.attr("step",this.options.step),this._input.click(a.proxy(this._onChange,this))),this._input.val(this._text)},_setInputName:function(){var a=this.options.isLeft?"left":"right";this._input.attr("name",this.options.id+a)},_onSwitch:function(b,c){a.ui.rangeSliderLabel.prototype._onSwitch.apply(this,[b,c]),this._setInputName()},_destroyInput:function(){this._input.remove(),this._input=null},_onKeyUp:function(a){return 13===a.which?(this._onChange(a),!1):void 0},_onChange:function(){var a=this._returnCheckedValue(this._input.val());a!==!1&&this._triggerValue(a)},_triggerValue:function(a){var b=this.options.handle[this.options.handleType]("option","isLeft");this.element.trigger("valueChange",[{isLeft:b,value:a}])},_returnCheckedValue:function(a){var b=parseFloat(a);return isNaN(b)||isNaN(Number(a))?!1:b},_setTypeOption:function(a){"text"!==a&&"number"!==a||this.options.type===a||(this._destroyInput(),this.options.type=a,this._createInput())},_setStepOption:function(a){this.options.step=a,"number"===this.options.type&&this._input.attr("step",a!==!1?a:"any")},_displayText:function(a){this._input.val(a),this._text=a},enable:function(){a.ui.rangeSliderLabel.prototype.enable.apply(this),this._input.attr("disabled",null)},disable:function(){a.ui.rangeSliderLabel.prototype.disable.apply(this),this._input.attr("disabled","disabled")}})}(jQuery),function(a){var b={first:function(a){return a},next:function(a){return a+1},format:function(){},label:function(a){return Math.round(a)},stop:function(){return!1}};a.widget("ui.ruler",{options:{min:0,max:100,scales:[]},_create:function(){this.element.addClass("ui-ruler"),this._createScales()},destroy:function(){this.element.removeClass("ui-ruler"),this.element.empty()},_regenerate:function(){this.element.empty(),this._createScales()},_setOption:function(a,b){return"min"===a||"max"===a&&b!==this.options[a]?(this.options[a]=b,this._regenerate(),void 0):"scales"===a&&b instanceof Array?(this.options.scales=b,this._regenerate(),void 0):void 0},_createScales:function(){if(this.options.max!==this.options.min)for(var a=0;a<this.options.scales.length;a++)this._createScale(this.options.scales[a],a)},_createScale:function(c,d){var e=a.extend({},b,c),f=a("<div class='ui-ruler-scale' />").appendTo(this.element);f.addClass("ui-ruler-scale"+d),this._createTicks(f,e)},_createTicks:function(a,b){var c,d,e,f=b.first(this.options.min,this.options.max),g=this.options.max-this.options.min,h=!0;do c=f,f=b.next(c),d=(Math.min(f,this.options.max)-Math.max(c,this.options.min))/g,e=this._createTick(c,f,b),a.append(e),e.css("width",100*d+"%"),h&&c>this.options.min&&e.css("margin-left",100*(c-this.options.min)/g+"%"),h=!1;while(!this._stop(b,f))},_stop:function(a,b){return a.stop(b)||b>=this.options.max},_createTick:function(b,c,d){var e=a("<div class='ui-ruler-tick' style='display:inline-block' />"),f=a("<div class='ui-ruler-tick-inner' />").appendTo(e),g=a("<span class='ui-ruler-tick-label' />").appendTo(f);return g.text(d.label(b,c)),d.format(e,b,c),e}})}(jQuery);
-return $.fn.rangeSlider;
-  }).apply(root, arguments);
-});
+}return{min:this._values.min,max:this._values.max}},update:function(){this._values.min=this.min(),this._values.max=this.max(),this._cache(),this._positionBar()}})}(jQuery),function(a){function b(b,c,d,e){this.label1=b,this.label2=c,this.type=d,this.options=e,this.handle1=this.label1[this.type]("option","handle"),this.handle2=this.label2[this.type]("option","handle"),this.cache=null,this.left=b,this.right=c,this.moving=!1,this.initialized=!1,this.updating=!1,this.Init=function(){this.BindHandle(this.handle1),this.BindHandle(this.handle2),"show"===this.options.show?(setTimeout(a.proxy(this.PositionLabels,this),1),this.initialized=!0):setTimeout(a.proxy(this.AfterInit,this),1e3),this._resizeProxy=a.proxy(this.onWindowResize,this),a(window).resize(this._resizeProxy)},this.Destroy=function(){this._resizeProxy&&(a(window).unbind("resize",this._resizeProxy),this._resizeProxy=null,this.handle1.unbind(".positionner"),this.handle1=null,this.handle2.unbind(".positionner"),this.handle2=null,this.label1=null,this.label2=null,this.left=null,this.right=null),this.cache=null},this.AfterInit=function(){this.initialized=!0},this.Cache=function(){"none"!==this.label1.css("display")&&(this.cache={},this.cache.label1={},this.cache.label2={},this.cache.handle1={},this.cache.handle2={},this.cache.offsetParent={},this.CacheElement(this.label1,this.cache.label1),this.CacheElement(this.label2,this.cache.label2),this.CacheElement(this.handle1,this.cache.handle1),this.CacheElement(this.handle2,this.cache.handle2),this.CacheElement(this.label1.offsetParent(),this.cache.offsetParent))},this.CacheIfNecessary=function(){null===this.cache?this.Cache():(this.CacheWidth(this.label1,this.cache.label1),this.CacheWidth(this.label2,this.cache.label2),this.CacheHeight(this.label1,this.cache.label1),this.CacheHeight(this.label2,this.cache.label2),this.CacheWidth(this.label1.offsetParent(),this.cache.offsetParent))},this.CacheElement=function(a,b){this.CacheWidth(a,b),this.CacheHeight(a,b),b.offset=a.offset(),b.margin={left:this.ParsePixels("marginLeft",a),right:this.ParsePixels("marginRight",a)},b.border={left:this.ParsePixels("borderLeftWidth",a),right:this.ParsePixels("borderRightWidth",a)}},this.CacheWidth=function(a,b){b.width=a.width(),b.outerWidth=a.outerWidth()},this.CacheHeight=function(a,b){b.outerHeightMargin=a.outerHeight(!0)},this.ParsePixels=function(a,b){return parseInt(b.css(a),10)||0},this.BindHandle=function(b){b.bind("updating.positionner",a.proxy(this.onHandleUpdating,this)),b.bind("update.positionner",a.proxy(this.onHandleUpdated,this)),b.bind("moving.positionner",a.proxy(this.onHandleMoving,this)),b.bind("stop.positionner",a.proxy(this.onHandleStop,this))},this.PositionLabels=function(){if(this.CacheIfNecessary(),null!==this.cache){var a=this.GetRawPosition(this.cache.label1,this.cache.handle1),b=this.GetRawPosition(this.cache.label2,this.cache.handle2);this.label1[d]("option","isLeft")?this.ConstraintPositions(a,b):this.ConstraintPositions(b,a),this.PositionLabel(this.label1,a.left,this.cache.label1),this.PositionLabel(this.label2,b.left,this.cache.label2)}},this.PositionLabel=function(a,b,c){var d,e,f,g=this.cache.offsetParent.offset.left+this.cache.offsetParent.border.left;g-b>=0?(a.css("right",""),a.offset({left:b})):(d=g+this.cache.offsetParent.width,e=b+c.margin.left+c.outerWidth+c.margin.right,f=d-e,a.css("left",""),a.css("right",f))},this.ConstraintPositions=function(a,b){(a.center<b.center&&a.outerRight>b.outerLeft||a.center>b.center&&b.outerRight>a.outerLeft)&&(a=this.getLeftPosition(a,b),b=this.getRightPosition(a,b))},this.getLeftPosition=function(a,b){var c=(b.center+a.center)/2,d=c-a.cache.outerWidth-a.cache.margin.right+a.cache.border.left;return a.left=d,a},this.getRightPosition=function(a,b){var c=(b.center+a.center)/2;return b.left=c+b.cache.margin.left+b.cache.border.left,b},this.ShowIfNecessary=function(){"show"===this.options.show||this.moving||!this.initialized||this.updating||(this.label1.stop(!0,!0).fadeIn(this.options.durationIn||0),this.label2.stop(!0,!0).fadeIn(this.options.durationIn||0),this.moving=!0)},this.HideIfNeeded=function(){this.moving===!0&&(this.label1.stop(!0,!0).delay(this.options.delayOut||0).fadeOut(this.options.durationOut||0),this.label2.stop(!0,!0).delay(this.options.delayOut||0).fadeOut(this.options.durationOut||0),this.moving=!1)},this.onHandleMoving=function(a,b){this.ShowIfNecessary(),this.CacheIfNecessary(),this.UpdateHandlePosition(b),this.PositionLabels()},this.onHandleUpdating=function(){this.updating=!0},this.onHandleUpdated=function(){this.updating=!1,this.cache=null},this.onHandleStop=function(){this.HideIfNeeded()},this.onWindowResize=function(){this.cache=null},this.UpdateHandlePosition=function(a){null!==this.cache&&(a.element[0]===this.handle1[0]?this.UpdatePosition(a,this.cache.handle1):this.UpdatePosition(a,this.cache.handle2))},this.UpdatePosition=function(a,b){b.offset=a.offset,b.value=a.value},this.GetRawPosition=function(a,b){var c=b.offset.left+b.outerWidth/2,d=c-a.outerWidth/2,e=d+a.outerWidth-a.border.left-a.border.right,f=d-a.margin.left-a.border.left,g=b.offset.top-a.outerHeightMargin;return{left:d,outerLeft:f,top:g,right:e,outerRight:f+a.outerWidth+a.margin.left+a.margin.right,cache:a,center:c}},this.Init()}a.widget("ui.rangeSliderLabel",a.ui.rangeSliderMouseTouch,{options:{handle:null,formatter:!1,handleType:"rangeSliderHandle",show:"show",durationIn:0,durationOut:500,delayOut:500,isLeft:!1},cache:null,_positionner:null,_valueContainer:null,_innerElement:null,_value:null,_create:function(){this.options.isLeft=this._handle("option","isLeft"),this.element.addClass("ui-rangeSlider-label").css("position","absolute").css("display","block"),this._createElements(),this._toggleClass(),this.options.handle.bind("moving.label",a.proxy(this._onMoving,this)).bind("update.label",a.proxy(this._onUpdate,this)).bind("switch.label",a.proxy(this._onSwitch,this)),"show"!==this.options.show&&this.element.hide(),this._mouseInit()},destroy:function(){this.options.handle.unbind(".label"),this.options.handle=null,this._valueContainer=null,this._innerElement=null,this.element.empty(),this._positionner&&(this._positionner.Destroy(),this._positionner=null),a.ui.rangeSliderMouseTouch.prototype.destroy.apply(this)},_createElements:function(){this._valueContainer=a("<div class='ui-rangeSlider-label-value' />").appendTo(this.element),this._innerElement=a("<div class='ui-rangeSlider-label-inner' />").appendTo(this.element)},_handle:function(){var a=Array.prototype.slice.apply(arguments);return this.options.handle[this.options.handleType].apply(this.options.handle,a)},_setOption:function(a,b){"show"===a?this._updateShowOption(b):("durationIn"===a||"durationOut"===a||"delayOut"===a)&&this._updateDurations(a,b),this._setFormatterOption(a,b)},_setFormatterOption:function(a,b){"formatter"===a&&("function"==typeof b||b===!1)&&(this.options.formatter=b,this._display(this._value))},_updateShowOption:function(a){this.options.show=a,"show"!==this.options.show?(this.element.hide(),this._positionner.moving=!1):(this.element.show(),this._display(this.options.handle[this.options.handleType]("value")),this._positionner.PositionLabels()),this._positionner.options.show=this.options.show},_updateDurations:function(a,b){parseInt(b,10)===b&&(this._positionner.options[a]=b,this.options[a]=b)},_display:function(a){this.options.formatter===!1?this._displayText(Math.round(a)):this._displayText(this.options.formatter(a)),this._value=a},_displayText:function(a){this._valueContainer.text(a)},_toggleClass:function(){this.element.toggleClass("ui-rangeSlider-leftLabel",this.options.isLeft).toggleClass("ui-rangeSlider-rightLabel",!this.options.isLeft)},_positionLabels:function(){this._positionner.PositionLabels()},_mouseDown:function(a){this.options.handle.trigger(a)},_mouseUp:function(a){this.options.handle.trigger(a)},_mouseMove:function(a){this.options.handle.trigger(a)},_onMoving:function(a,b){this._display(b.value)},_onUpdate:function(){"show"===this.options.show&&this.update()},_onSwitch:function(a,b){this.options.isLeft=b,this._toggleClass(),this._positionLabels()},pair:function(a){null===this._positionner&&(this._positionner=new b(this.element,a,this.widgetName,{show:this.options.show,durationIn:this.options.durationIn,durationOut:this.options.durationOut,delayOut:this.options.delayOut}),a[this.widgetName]("positionner",this._positionner))},positionner:function(a){return"undefined"!=typeof a&&(this._positionner=a),this._positionner},update:function(){this._positionner.cache=null,this._display(this._handle("value")),"show"===this.options.show&&this._positionLabels()}})}(jQuery),function(a){a.widget("ui.dateRangeSlider",a.ui.rangeSlider,{options:{bounds:{min:new Date(2010,0,1).valueOf(),max:new Date(2012,0,1).valueOf()},defaultValues:{min:new Date(2010,1,11).valueOf(),max:new Date(2011,1,11).valueOf()}},_create:function(){a.ui.rangeSlider.prototype._create.apply(this),this.element.addClass("ui-dateRangeSlider")},destroy:function(){this.element.removeClass("ui-dateRangeSlider"),a.ui.rangeSlider.prototype.destroy.apply(this)},_setDefaultValues:function(){this._values={min:this.options.defaultValues.min.valueOf(),max:this.options.defaultValues.max.valueOf()}},_setRulerParameters:function(){this.ruler.ruler({min:new Date(this.options.bounds.min),max:new Date(this.options.bounds.max),scales:this.options.scales})},_setOption:function(b,c){("defaultValues"===b||"bounds"===b)&&"undefined"!=typeof c&&null!==c&&this._isValidDate(c.min)&&this._isValidDate(c.max)?a.ui.rangeSlider.prototype._setOption.apply(this,[b,{min:c.min.valueOf(),max:c.max.valueOf()}]):a.ui.rangeSlider.prototype._setOption.apply(this,this._toArray(arguments))},_handleType:function(){return"dateRangeSliderHandle"},option:function(b){if("bounds"===b||"defaultValues"===b){var c=a.ui.rangeSlider.prototype.option.apply(this,arguments);return{min:new Date(c.min),max:new Date(c.max)}}return a.ui.rangeSlider.prototype.option.apply(this,this._toArray(arguments))},_defaultFormatter:function(a){var b=a.getMonth()+1,c=a.getDate();return""+a.getFullYear()+"-"+(10>b?"0"+b:b)+"-"+(10>c?"0"+c:c)},_getFormatter:function(){var a=this.options.formatter;return(this.options.formatter===!1||null===this.options.formatter)&&(a=this._defaultFormatter),function(a){return function(b){return a(new Date(b))}}(a)},values:function(b,c){var d=null;return d=this._isValidDate(b)&&this._isValidDate(c)?a.ui.rangeSlider.prototype.values.apply(this,[b.valueOf(),c.valueOf()]):a.ui.rangeSlider.prototype.values.apply(this,this._toArray(arguments)),{min:new Date(d.min),max:new Date(d.max)}},min:function(b){return this._isValidDate(b)?new Date(a.ui.rangeSlider.prototype.min.apply(this,[b.valueOf()])):new Date(a.ui.rangeSlider.prototype.min.apply(this))},max:function(b){return this._isValidDate(b)?new Date(a.ui.rangeSlider.prototype.max.apply(this,[b.valueOf()])):new Date(a.ui.rangeSlider.prototype.max.apply(this))},bounds:function(b,c){var d;return d=this._isValidDate(b)&&this._isValidDate(c)?a.ui.rangeSlider.prototype.bounds.apply(this,[b.valueOf(),c.valueOf()]):a.ui.rangeSlider.prototype.bounds.apply(this,this._toArray(arguments)),{min:new Date(d.min),max:new Date(d.max)}},_isValidDate:function(a){return"undefined"!=typeof a&&a instanceof Date},_toArray:function(a){return Array.prototype.slice.call(a)}})}(jQuery),function(a){a.widget("ui.dateRangeSliderHandle",a.ui.rangeSliderHandle,{_steps:!1,_boundsValues:{},_create:function(){this._createBoundsValues(),a.ui.rangeSliderHandle.prototype._create.apply(this)},_getValueForPosition:function(a){var b=this._getRawValueForPositionAndBounds(a,this.options.bounds.min.valueOf(),this.options.bounds.max.valueOf());return this._constraintValue(new Date(b))},_setOption:function(b,c){return"step"===b?(this.options.step=c,this._createSteps(),this.update(),void 0):(a.ui.rangeSliderHandle.prototype._setOption.apply(this,[b,c]),"bounds"===b&&this._createBoundsValues(),void 0)},_createBoundsValues:function(){this._boundsValues={min:this.options.bounds.min.valueOf(),max:this.options.bounds.max.valueOf()}},_bounds:function(){return this._boundsValues},_createSteps:function(){if(this.options.step===!1||!this._isValidStep())return this._steps=!1,void 0;var a=new Date(this.options.bounds.min),b=new Date(this.options.bounds.max),c=a,d=0,e=new Date;for(this._steps=[];b>=c&&(1===d||e.valueOf()!==c.valueOf());)e=c,this._steps.push(c.valueOf()),c=this._addStep(a,d,this.options.step),d++;e.valueOf()===c.valueOf()&&(this._steps=!1)},_isValidStep:function(){return"object"==typeof this.options.step},_addStep:function(a,b,c){var d=new Date(a.valueOf());return d=this._addThing(d,"FullYear",b,c.years),d=this._addThing(d,"Month",b,c.months),d=this._addThing(d,"Date",b,7*c.weeks),d=this._addThing(d,"Date",b,c.days),d=this._addThing(d,"Hours",b,c.hours),d=this._addThing(d,"Minutes",b,c.minutes),d=this._addThing(d,"Seconds",b,c.seconds)},_addThing:function(a,b,c,d){return 0===c||0===(d||0)?a:(a["set"+b](a["get"+b]()+c*(d||0)),a)},_round:function(a){if(this._steps===!1)return a;for(var b,c,d=this.options.bounds.max.valueOf(),e=this.options.bounds.min.valueOf(),f=Math.max(0,(a-e)/(d-e)),g=Math.floor(this._steps.length*f);this._steps[g]>a;)g--;for(;g+1<this._steps.length&&this._steps[g+1]<=a;)g++;return g>=this._steps.length-1?this._steps[this._steps.length-1]:0===g?this._steps[0]:(b=this._steps[g],c=this._steps[g+1],c-a>a-b?b:c)},update:function(){this._createBoundsValues(),this._createSteps(),a.ui.rangeSliderHandle.prototype.update.apply(this)},add:function(a,b){return this._addStep(new Date(a),1,b).valueOf()},substract:function(a,b){return this._addStep(new Date(a),-1,b).valueOf()},stepsBetween:function(a,b){if(this.options.step===!1)return b-a;var c=Math.min(a,b),d=Math.max(a,b),e=0,f=!1,g=a>b;for(this.add(c,this.options.step)-c<0&&(f=!0);d>c;)f?d=this.add(d,this.options.step):c=this.add(c,this.options.step),e++;return g?-e:e},multiplyStep:function(a,b){var c={};for(var d in a)a.hasOwnProperty(d)&&(c[d]=a[d]*b);return c},stepRatio:function(){if(this.options.step===!1)return 1;var a=this._steps.length;return this.cache.parent.width/a}})}(jQuery),function(a){a.widget("ui.editRangeSlider",a.ui.rangeSlider,{options:{type:"text",round:1},_create:function(){a.ui.rangeSlider.prototype._create.apply(this),this.element.addClass("ui-editRangeSlider")},destroy:function(){this.element.removeClass("ui-editRangeSlider"),a.ui.rangeSlider.prototype.destroy.apply(this)},_setOption:function(b,c){("type"===b||"step"===b)&&this._setLabelOption(b,c),"type"===b&&(this.options[b]=null===this.labels.left?c:this._leftLabel("option",b)),a.ui.rangeSlider.prototype._setOption.apply(this,[b,c])},_setLabelOption:function(a,b){null!==this.labels.left&&(this._leftLabel("option",a,b),this._rightLabel("option",a,b))},_labelType:function(){return"editRangeSliderLabel"},_createLabel:function(b,c){var d=a.ui.rangeSlider.prototype._createLabel.apply(this,[b,c]);return null===b&&d.bind("valueChange",a.proxy(this._onValueChange,this)),d},_addPropertiesToParameter:function(a){return a.type=this.options.type,a.step=this.options.step,a.id=this.element.attr("id"),a},_getLabelConstructorParameters:function(b,c){var d=a.ui.rangeSlider.prototype._getLabelConstructorParameters.apply(this,[b,c]);return this._addPropertiesToParameter(d)},_getLabelRefreshParameters:function(b,c){var d=a.ui.rangeSlider.prototype._getLabelRefreshParameters.apply(this,[b,c]);return this._addPropertiesToParameter(d)},_onValueChange:function(a,b){var c=!1;c=b.isLeft?this._values.min!==this.min(b.value):this._values.max!==this.max(b.value),c&&this._trigger("userValuesChanged")}})}(jQuery),function(a){a.widget("ui.editRangeSliderLabel",a.ui.rangeSliderLabel,{options:{type:"text",step:!1,id:""},_input:null,_text:"",_create:function(){a.ui.rangeSliderLabel.prototype._create.apply(this),this._createInput()},_setOption:function(b,c){"type"===b?this._setTypeOption(c):"step"===b&&this._setStepOption(c),a.ui.rangeSliderLabel.prototype._setOption.apply(this,[b,c])},_createInput:function(){this._input=a("<input type='"+this.options.type+"' />").addClass("ui-editRangeSlider-inputValue").appendTo(this._valueContainer),this._setInputName(),this._input.bind("keyup",a.proxy(this._onKeyUp,this)),this._input.blur(a.proxy(this._onChange,this)),"number"===this.options.type&&(this.options.step!==!1&&this._input.attr("step",this.options.step),this._input.click(a.proxy(this._onChange,this))),this._input.val(this._text)},_setInputName:function(){var a=this.options.isLeft?"left":"right";this._input.attr("name",this.options.id+a)},_onSwitch:function(b,c){a.ui.rangeSliderLabel.prototype._onSwitch.apply(this,[b,c]),this._setInputName()},_destroyInput:function(){this._input.remove(),this._input=null},_onKeyUp:function(a){return 13===a.which?(this._onChange(a),!1):void 0},_onChange:function(){var a=this._returnCheckedValue(this._input.val());a!==!1&&this._triggerValue(a)},_triggerValue:function(a){var b=this.options.handle[this.options.handleType]("option","isLeft");this.element.trigger("valueChange",[{isLeft:b,value:a}])},_returnCheckedValue:function(a){var b=parseFloat(a);return isNaN(b)||isNaN(Number(a))?!1:b},_setTypeOption:function(a){"text"!==a&&"number"!==a||this.options.type===a||(this._destroyInput(),this.options.type=a,this._createInput())},_setStepOption:function(a){this.options.step=a,"number"===this.options.type&&this._input.attr("step",a!==!1?a:"any")},_displayText:function(a){this._input.val(a),this._text=a},enable:function(){a.ui.rangeSliderLabel.prototype.enable.apply(this),this._input.attr("disabled",null)},disable:function(){a.ui.rangeSliderLabel.prototype.disable.apply(this),this._input.attr("disabled","disabled")}})}(jQuery),function(a){var b={first:function(a){return a},next:function(a){return a+1},format:function(){},label:function(a){return Math.round(a)},stop:function(){return!1}};a.widget("ui.ruler",{options:{min:0,max:100,scales:[]},_create:function(){this.element.addClass("ui-ruler"),this._createScales()},destroy:function(){this.element.removeClass("ui-ruler"),this.element.empty()},_regenerate:function(){this.element.empty(),this._createScales()},_setOption:function(a,b){return"min"===a||"max"===a&&b!==this.options[a]?(this.options[a]=b,this._regenerate(),void 0):"scales"===a&&b instanceof Array?(this.options.scales=b,this._regenerate(),void 0):void 0},_createScales:function(){if(this.options.max!==this.options.min)for(var a=0;a<this.options.scales.length;a++)this._createScale(this.options.scales[a],a)},_createScale:function(c,d){var e=a.extend({},b,c),f=a("<div class='ui-ruler-scale' />").appendTo(this.element);f.addClass("ui-ruler-scale"+d),this._createTicks(f,e)},_createTicks:function(a,b){var c,d,e,f=b.first(this.options.min,this.options.max),g=this.options.max-this.options.min,h=!0;do c=f,f=b.next(c),d=(Math.min(f,this.options.max)-Math.max(c,this.options.min))/g,e=this._createTick(c,f,b),a.append(e),e.css("width",100*d+"%"),h&&c>this.options.min&&e.css("margin-left",100*(c-this.options.min)/g+"%"),h=!1;while(!this._stop(b,f))},_stop:function(a,b){return a.stop(b)||b>=this.options.max},_createTick:function(b,c,d){var e=a("<div class='ui-ruler-tick' style='display:inline-block' />"),f=a("<div class='ui-ruler-tick-inner' />").appendTo(e),g=a("<span class='ui-ruler-tick-label' />").appendTo(f);return g.text(d.label(b,c)),d.format(e,b,c),e}})}(jQuery);return $.fn.rangeSlider;      }).apply(root, arguments);
+    });
 }(this));
 
 (function() {
@@ -63243,7 +62953,7 @@ define('widget/dialog_template',[],function(){
 //@ sourceMappingURL=spread.js.map
 */;
 (function() {
-  define('common/base',["underscore", "require", "common/custom", "common/gmap_plot", "common/grid_plot", "common/plot", "common/plot_context", "mapper/1d/categorical_mapper", "mapper/1d/linear_mapper", "mapper/1d/log_mapper", "mapper/2d/grid_mapper", "mapper/color/linear_color_mapper", "range/data_factor_range", "range/data_range1d", "range/factor_range", "range/range1d", "renderer/annotation/legend", "renderer/glyph/glyph_factory", "renderer/guide/categorical_axis", "renderer/guide/datetime_axis", "renderer/guide/grid", "renderer/guide/linear_axis", "renderer/guide/log_axis", "renderer/overlay/box_selection", "source/column_data_source", "source/server_data_source", "ticking/abstract_ticker", "ticking/adaptive_ticker", "ticking/basic_tick_formatter", "ticking/basic_ticker", "ticking/log_ticker", "ticking/log_tick_formatter", "ticking/categorical_tick_formatter", "ticking/categorical_ticker", "ticking/composite_ticker", "ticking/datetime_tick_formatter", "ticking/datetime_ticker", "ticking/days_ticker", "ticking/months_ticker", "ticking/single_interval_ticker", "ticking/years_ticker", "tool/box_select_tool", "tool/box_zoom_tool", "tool/click_tool", "tool/crosshair_tool", "tool/data_range_box_select_tool", "tool/embed_tool", "tool/hover_tool", "tool/pan_tool", "tool/preview_save_tool", "tool/reset_tool", "tool/resize_tool", "tool/wheel_zoom_tool", "tool/object_explorer_tool", "widget/data_slider", "widget/data_table", "widget/handson_table", "widget/table_column", "widget/pivot_table", "widget/object_explorer", "widget/pandas/ipython_remote_data", "widget/pandas/pandas_pivot_table", "widget/pandas/pandas_plot_source", 'widget/paragraph', 'widget/hbox', 'widget/vbox', 'widget/textinput', 'widget/vboxmodelform', 'widget/pretext', 'widget/selectbox', 'widget/slider', 'widget/crossfilter', 'widget/volumeslicer/volumeslicer', 'widget/multiselect', 'widget/date_range_slider', 'widget/date_picker', 'widget/panel', 'widget/tabs', 'widget/dialog', 'transforms/const', 'transforms/count', 'transforms/cuberoot', 'transforms/id', 'transforms/interpolate', 'transforms/seq', 'transforms/spread'], function(_, require) {
+  define('common/base',["underscore", "require", "common/custom", "common/gmap_plot", "common/grid_plot", "common/plot", "common/plot_context", "mapper/1d/categorical_mapper", "mapper/1d/linear_mapper", "mapper/1d/log_mapper", "mapper/2d/grid_mapper", "mapper/color/linear_color_mapper", "range/data_factor_range", "range/data_range1d", "range/factor_range", "range/range1d", "renderer/annotation/legend", "renderer/glyph/glyph_factory", "renderer/guide/categorical_axis", "renderer/guide/datetime_axis", "renderer/guide/grid", "renderer/guide/linear_axis", "renderer/guide/log_axis", "renderer/overlay/box_selection", "source/column_data_source", "source/server_data_source", "ticking/abstract_ticker", "ticking/adaptive_ticker", "ticking/basic_tick_formatter", "ticking/basic_ticker", "ticking/log_ticker", "ticking/log_tick_formatter", "ticking/categorical_tick_formatter", "ticking/categorical_ticker", "ticking/composite_ticker", "ticking/datetime_tick_formatter", "ticking/datetime_ticker", "ticking/days_ticker", "ticking/months_ticker", "ticking/single_interval_ticker", "ticking/years_ticker", "tool/box_select_tool", "tool/box_zoom_tool", "tool/click_tool", "tool/crosshair_tool", "tool/data_range_box_select_tool", "tool/embed_tool", "tool/hover_tool", "tool/pan_tool", "tool/preview_save_tool", "tool/reset_tool", "tool/resize_tool", "tool/wheel_zoom_tool", "tool/object_explorer_tool", "widget/data_slider", "widget/data_table", "widget/handson_table", "widget/table_column", "widget/pivot_table", "widget/object_explorer", "widget/pandas/ipython_remote_data", "widget/pandas/pandas_pivot_table", "widget/pandas/pandas_plot_source", 'widget/paragraph', 'widget/hbox', 'widget/vbox', 'widget/textinput', 'widget/vboxmodelform', 'widget/pretext', 'widget/selectbox', 'widget/slider', 'widget/crossfilter', 'widget/multiselect', 'widget/date_range_slider', 'widget/date_picker', 'widget/panel', 'widget/tabs', 'widget/dialog', 'transforms/const', 'transforms/count', 'transforms/cuberoot', 'transforms/id', 'transforms/interpolate', 'transforms/seq', 'transforms/spread'], function(_, require) {
     var Collections, Config, collection_overrides, locations, mod_cache, url;
     require("common/custom").monkey_patch();
     Config = {};
@@ -63320,7 +63030,6 @@ define('widget/dialog_template',[],function(){
       Select: 'widget/selectbox',
       Slider: 'widget/slider',
       CrossFilter: 'widget/crossfilter',
-      VolumeSlicer: 'widget/volumeslicer/volumeslicer',
       MultiSelect: 'widget/multiselect',
       DateRangeSlider: 'widget/date_range_slider',
       DatePicker: 'widget/date_picker',
@@ -64082,7 +63791,6 @@ define('widget/dialog_template',[],function(){
         var clientid, model, msgobj, ref, _i, _len, _ref;
         msgobj = JSON.parse(msg);
         if (msgobj['msgtype'] === 'modelpush') {
-          console.log(msgobj['modelspecs']);
           load_models(msgobj['modelspecs']);
         } else if (msgobj['msgtype'] === 'modeldel') {
           _ref = msgobj['modelspecs'];
@@ -64122,8 +63830,8 @@ define('widget/dialog_template',[],function(){
 //@ sourceMappingURL=socket.js.map
 */;
 (function() {
-  define('server/serverutils',["common/base", "server/serverutils", "common/socket", "common/load_models", "backbone", "common/has_properties"], function(base, serverutils, socket, load_models, Backbone, HasProperties) {
-    var Deferreds, Promises, WebSocketWrapper, configure_server, exports, submodels, utility;
+  define('server/serverutils',["common/base", "common/socket", "common/load_models", "backbone", "common/has_properties"], function(base, socket, load_models, Backbone, HasProperties) {
+    var Deferreds, Promises, WebSocketWrapper, exports, submodels, utility;
     Deferreds = {};
     Promises = {};
     exports = {};
@@ -64140,17 +63848,15 @@ define('widget/dialog_template',[],function(){
     exports.Promises = Promises;
     utility = {
       load_one_object_chain: function(docid, objid) {
-        var resp;
-        HasProperties.prototype.sync = Backbone.sync;
-        resp = utility.make_websocket();
-        resp = resp.then(function() {
-          var Config, url;
-          Config = require("common/base").Config;
-          url = "" + Config.prefix + "bokeh/objinfo/" + docid + "/" + objid;
-          console.log(url);
-          resp = $.get(url);
-          return resp;
-        });
+        var Config, resp, url;
+        if (exports.wswrapper == null) {
+          utility.make_websocket();
+          HasProperties.prototype.sync = Backbone.sync;
+        }
+        Config = require("common/base").Config;
+        url = "" + Config.prefix + "bokeh/objinfo/" + docid + "/" + objid;
+        console.log(url);
+        resp = $.get(url);
         resp.done(function(data) {
           var all_models, apikey;
           all_models = data['all_models'];
@@ -64164,6 +63870,18 @@ define('widget/dialog_template',[],function(){
         var response;
         response = $.get('/bokeh/userinfo/', {});
         return response;
+      },
+      load_doc_once: function(docid) {
+        var doc_prom;
+        if (_.has(Promises.doc_promises, docid)) {
+          console.log("already found " + docid + " in promises");
+          return Promises.doc_promises[docid];
+        } else {
+          console.log("" + docid + " not in promises, loading it");
+          doc_prom = utility.load_doc(docid);
+          Promises.doc_promises[docid] = doc_prom;
+          return doc_prom;
+        }
       },
       load_doc_by_title: function(title) {
         var Config, response;
@@ -64189,39 +63907,24 @@ define('widget/dialog_template',[],function(){
         return promise;
       },
       load_doc: function(docid) {
-        var resp;
-        resp = utility.make_websocket();
-        resp = resp.then(function() {
-          var Config;
-          Config = require("common/base").Config;
-          return $.get(Config.prefix + ("bokeh/bokehinfo/" + docid + "/"), {});
-        });
-        resp.done(function(data) {
+        var Config, response, wswrapper;
+        wswrapper = utility.make_websocket();
+        Config = require("common/base").Config;
+        response = $.get(Config.prefix + ("bokeh/bokehinfo/" + docid + "/"), {}).done(function(data) {
           var all_models, apikey;
           all_models = data['all_models'];
           load_models(all_models);
           apikey = data['apikey'];
           return submodels(exports.wswrapper, "bokehplot:" + docid, apikey);
         });
-        return resp;
+        return response;
       },
       make_websocket: function() {
-        var Config, resp;
-        if (exports.wswrapper != null) {
-          return exports._wswrapper_deferred;
-        } else {
-          Config = require("common/base").Config;
-          exports._wswrapper_deferred = $.get(Config.prefix + "bokeh/wsurl/");
-          resp = exports._wswrapper_deferred;
-          resp.done(function(data) {
-            var wswrapper;
-            Config = require("common/base").Config;
-            configure_server(data, null);
-            wswrapper = new WebSocketWrapper(Config.ws_conn_string);
-            return exports.wswrapper = wswrapper;
-          });
-          return resp;
-        }
+        var Config, wswrapper;
+        Config = require("common/base").Config;
+        wswrapper = new WebSocketWrapper(Config.ws_conn_string);
+        exports.wswrapper = wswrapper;
+        return wswrapper;
       },
       render_plots: function(plot_context_ref, viewclass, viewoptions) {
         var Collections, options, plotcontext, plotcontextview;
@@ -64261,21 +63964,7 @@ define('widget/dialog_template',[],function(){
         }
       }
     };
-    configure_server = function(ws_conn_string, prefix) {
-      var Config;
-      Config = require("common/base").Config;
-      if (ws_conn_string) {
-        Config.ws_conn_string = ws_conn_string;
-        console.log('setting ws_conn_string to', Config.ws_conn_string);
-      }
-      if (prefix) {
-        Config.prefix = prefix;
-        console.log('setting prefix to', Config.prefix);
-      }
-      return null;
-    };
     exports.utility = utility;
-    exports.configure_server = configure_server;
     return exports;
   });
 
@@ -64283,6 +63972,156 @@ define('widget/dialog_template',[],function(){
 
 /*
 //@ sourceMappingURL=serverutils.js.map
+*/;
+(function() {
+  var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
+  define('server/embed_core',["common/base", "common/load_models", "server/serverutils"], function(base, load_models, serverutils) {
+    var addDirectPlot, addDirectPlotWrap, addPlot, addPlotWrap, exports, find_injections, foundEls, injectCss, parse_el, search_and_plot, serverLoad, unsatisfied_els, utility;
+    utility = serverutils.utility;
+    addPlotWrap = function(settings, dd) {
+      return addPlot(settings.bokeh_modelid, settings.bokeh_modeltype, settings.element, dd);
+    };
+    addPlot = function(modelid, modeltype, element, data) {
+      var data_plot_id, model, view;
+      data_plot_id = _.keys(data)[0];
+      if (!data_plot_id === modelid) {
+        return;
+      }
+      console.log("addPlot");
+      console.log(modelid, modeltype, element);
+      load_models(data[data_plot_id]);
+      model = base.Collections(modeltype).get(modelid);
+      view = new model.default_view({
+        model: model
+      });
+      view.render();
+      return _.delay(function() {
+        return $(element).replaceWith(view.$el);
+      });
+    };
+    addDirectPlotWrap = function(settings) {
+      console.log("addDirectPlotWrap");
+      return addDirectPlot(settings.bokeh_docid, settings.bokeh_ws_conn_string, settings.bokeh_docapikey, settings.bokeh_root_url, settings.bokeh_modelid, settings.bokeh_modeltype, settings.element);
+    };
+    serverLoad = function(docid, ws_conn_string, docapikey, root_url) {
+      var BokehConfig, headers;
+      console.log("serverLoad");
+      headers = {
+        'BOKEH-API-KEY': docapikey
+      };
+      $.ajaxSetup({
+        'headers': headers
+      });
+      BokehConfig = base.Config;
+      BokehConfig.prefix = root_url;
+      BokehConfig.ws_conn_string = ws_conn_string;
+      return utility.load_doc_once(docid);
+    };
+    addDirectPlot = function(docid, ws_conn_string, docapikey, root_url, modelid, modeltype, element) {
+      return serverLoad(docid, ws_conn_string, docapikey, root_url).done(function() {
+        var model, plot_collection, view;
+        console.log("addPlot");
+        console.log(modelid, modeltype, element);
+        plot_collection = base.Collections(modeltype);
+        model = plot_collection.get(modelid);
+        view = new model.default_view({
+          model: model
+        });
+        return _.delay(function() {
+          return $(element).replaceWith(view.$el);
+        });
+      });
+    };
+    injectCss = function(static_root_url) {
+      var css_urls, load_css;
+      css_urls = ["" + static_root_url + "css/bokeh.css"];
+      load_css = function(url) {
+        var link;
+        link = document.createElement('link');
+        link.href = url;
+        link.rel = "stylesheet";
+        link.type = "text/css";
+        return document.body.appendChild(link);
+      };
+      return _.map(css_urls, load_css);
+    };
+    foundEls = [];
+    parse_el = function(el) {
+      "this takes a bokeh embed script element and returns the relvant\nattributes through to a dictionary, ";
+      var attr, attrs, bokehCount, bokehRe, info, _i, _len;
+      attrs = el.attributes;
+      bokehRe = /bokeh.*/;
+      info = {};
+      bokehCount = 0;
+      for (_i = 0, _len = attrs.length; _i < _len; _i++) {
+        attr = attrs[_i];
+        if (attr.name.match(bokehRe)) {
+          info[attr.name] = attr.value;
+          bokehCount++;
+        }
+      }
+      if (bokehCount > 0) {
+        return info;
+      } else {
+        return false;
+      }
+    };
+    unsatisfied_els = {};
+    find_injections = function() {
+      var container, d, el, els, info, is_new_el, matches, new_settings, re, _i, _len;
+      els = document.getElementsByTagName('script');
+      re = /.*embed.js.*/;
+      new_settings = [];
+      for (_i = 0, _len = els.length; _i < _len; _i++) {
+        el = els[_i];
+        is_new_el = __indexOf.call(foundEls, el) < 0;
+        matches = el.src.match(re);
+        if (is_new_el && matches) {
+          foundEls.push(el);
+          info = parse_el(el);
+          d = document.createElement('div');
+          container = document.createElement('div');
+          container.className = "bokeh-container";
+          el.parentNode.insertBefore(container, el);
+          info['element'] = container;
+          new_settings.push(info);
+        }
+      }
+      return new_settings;
+    };
+    search_and_plot = function(dd) {
+      var new_plot_dicts, plot_from_dict;
+      plot_from_dict = function(info_dict, key) {
+        var dd_id;
+        if (info_dict.bokeh_plottype === 'embeddata') {
+          dd_id = _.keys(dd)[0];
+          if (key === dd_id) {
+            addPlotWrap(info_dict, dd);
+            return delete unsatisfied_els[key];
+          }
+        } else {
+          addDirectPlotWrap(info_dict);
+          return delete unsatisfied_els[key];
+        }
+      };
+      new_plot_dicts = find_injections();
+      _.each(new_plot_dicts, function(plotdict) {
+        return unsatisfied_els[plotdict['bokeh_modelid']] = plotdict;
+      });
+      return _.map(unsatisfied_els, plot_from_dict);
+    };
+    exports = {
+      search_and_plot: search_and_plot,
+      injectCss: injectCss
+    };
+    return exports;
+  });
+
+}).call(this);
+
+/*
+//@ sourceMappingURL=embed_core.js.map
 */;
 (function() {
   define('server/embed',["jquery", "common/base", "common/load_models", "server/serverutils"], function($, base, load_models, serverutils) {
@@ -64764,16 +64603,10 @@ define('server/usercontext/wrappertemplate',[],function(){
 */;
 (function() {
   define('server/serverrun',["common/base", "./serverutils", "./usercontext/usercontext", "common/has_properties"], function(base, serverutils, usercontext, HasProperties) {
-    var Config, Promises, load, load_one_object, prefix, reload, url, _render, _render_all, _render_one;
+    var Config, Promises, load, load_one_object, reload, _render, _render_all, _render_one;
     Config = base.Config;
     Promises = serverutils.Promises;
-    url = window.location.href;
-    if (url.indexOf('/bokeh') > 0) {
-      prefix = url.slice(0, url.indexOf('/bokeh')) + "/";
-    } else {
-      prefix = '/';
-    }
-    serverutils.configure_server(null, prefix);
+    Config.ws_conn_string = "ws://" + window.location.host + "/bokeh/sub";
     reload = function() {
       var ping_url;
       Config = require("common/base").Config;
@@ -64789,50 +64622,47 @@ define('server/usercontext/wrappertemplate',[],function(){
     load_one_object = function(docid, objid) {
       HasProperties.prototype.sync = Backbone.sync;
       return $(function() {
-        var resp;
+        var resp, wswrapper;
+        wswrapper = serverutils.utility.make_websocket();
         resp = serverutils.utility.load_one_object_chain(docid, objid);
-        return resp.done(function(data) {
-          var model, view, wswrapper;
+        resp.done(function(data) {
+          var model, view;
           model = base.Collections(data.type).get(objid);
           view = new model.default_view({
             model: model
           });
-          _render(view.el);
-          wswrapper = serverutils.wswrapper;
-          wswrapper.subscribe("debug:debug", "");
-          return wswrapper.on('msg:debug:debug', function(msg) {
-            if (msg === 'reload') {
-              return reload();
-            }
-          });
+          return _render(view.el);
+        });
+        wswrapper.subscribe("debug:debug", "");
+        return wswrapper.on('msg:debug:debug', function(msg) {
+          if (msg === 'reload') {
+            return reload();
+          }
         });
       });
     };
     load = function(title) {
       HasProperties.prototype.sync = Backbone.sync;
       return $(function() {
-        var resp;
-        resp = serverutils.utility.make_websocket();
-        return resp.then(function() {
-          var userdocs, wswrapper;
-          wswrapper = serverutils.wswrapper;
-          userdocs = new usercontext.UserDocs();
-          userdocs.subscribe(wswrapper, 'defaultuser');
-          load = userdocs.fetch();
-          load.done(function() {
-            if (title != null) {
-              return _render_one(userdocs, title);
-            } else {
-              return _render_all(userdocs);
-            }
-          });
-          console.log('subscribing to debug');
-          wswrapper.subscribe("debug:debug", "");
-          return wswrapper.on('msg:debug:debug', function(msg) {
-            if (msg === 'reload') {
-              return reload();
-            }
-          });
+        var userdocs, wswrapper;
+        wswrapper = serverutils.utility.make_websocket();
+        userdocs = new usercontext.UserDocs();
+        userdocs.subscribe(wswrapper, 'defaultuser');
+        window.userdocs = userdocs;
+        load = userdocs.fetch();
+        load.done(function() {
+          if (title != null) {
+            return _render_one(userdocs, title);
+          } else {
+            return _render_all(userdocs);
+          }
+        });
+        console.log('subscribing to debug');
+        wswrapper.subscribe("debug:debug", "");
+        return wswrapper.on('msg:debug:debug', function(msg) {
+          if (msg === 'reload') {
+            return reload();
+          }
         });
       });
     };
@@ -64879,7 +64709,7 @@ define('server/usercontext/wrappertemplate',[],function(){
 //@ sourceMappingURL=serverrun.js.map
 */;
 (function() {
-  define('main',['require','exports','module','underscore','jquery','backbone','common/base','common/base','common/gmap_plot','common/grid_plot','common/has_parent','common/has_properties','common/plot','common/plotting','common/affine','common/build_views','common/bulk_save','common/continuum_view','common/grid_view_state','common/load_models','common/plot_context','common/plot_widget','common/png_view','common/random','common/safebind','common/svg_colors','common/view_state','mapper/1d/linear_mapper','mapper/1d/log_mapper','mapper/1d/categorical_mapper','mapper/2d/grid_mapper','mapper/color/linear_color_mapper','palettes/palettes','renderer/annotation/legend','renderer/glyph/glyph','renderer/glyph/glyph_factory','renderer/guide/categorical_axis','renderer/guide/datetime_axis','renderer/guide/grid','renderer/guide/linear_axis','renderer/guide/log_axis','renderer/overlay/box_selection','renderer/properties','server/embed','server/serverrun','server/serverutils','source/column_data_source','ticking/abstract_ticker','ticking/adaptive_ticker','ticking/basic_ticker','ticking/basic_tick_formatter','ticking/log_ticker','ticking/log_tick_formatter','ticking/categorical_ticker','ticking/categorical_tick_formatter','ticking/composite_ticker','ticking/datetime_ticker','ticking/datetime_tick_formatter','ticking/days_ticker','ticking/months_ticker','ticking/single_interval_ticker','ticking/years_ticker','tool/box_select_tool','tool/box_zoom_tool','tool/click_tool','tool/crosshair_tool','tool/data_range_box_select_tool','tool/embed_tool','tool/hover_tool','tool/pan_tool','tool/preview_save_tool','tool/reset_tool','tool/resize_tool','tool/wheel_zoom_tool','tool/object_explorer_tool','server/serverrun','server/serverrun','widget/data_slider','widget/hbox','widget/vbox','widget/vboxmodelform','widget/textinput','widget/crossfilter','widget/object_explorer'],function(require, exports, module) {
+  define('main',['require','exports','module','underscore','jquery','backbone','common/base','common/base','common/gmap_plot','common/grid_plot','common/has_parent','common/has_properties','common/plot','common/plotting','common/affine','common/build_views','common/bulk_save','common/continuum_view','common/grid_view_state','common/load_models','common/plot_context','common/plot_widget','common/png_view','common/random','common/safebind','common/svg_colors','common/view_state','mapper/1d/linear_mapper','mapper/1d/log_mapper','mapper/1d/categorical_mapper','mapper/2d/grid_mapper','mapper/color/linear_color_mapper','palettes/palettes','renderer/annotation/legend','renderer/glyph/glyph','renderer/glyph/glyph_factory','renderer/guide/categorical_axis','renderer/guide/datetime_axis','renderer/guide/grid','renderer/guide/linear_axis','renderer/guide/log_axis','renderer/overlay/box_selection','renderer/properties','server/embed_core','server/embed','server/serverrun','server/serverutils','source/column_data_source','ticking/abstract_ticker','ticking/adaptive_ticker','ticking/basic_ticker','ticking/basic_tick_formatter','ticking/log_ticker','ticking/log_tick_formatter','ticking/categorical_ticker','ticking/categorical_tick_formatter','ticking/composite_ticker','ticking/datetime_ticker','ticking/datetime_tick_formatter','ticking/days_ticker','ticking/months_ticker','ticking/single_interval_ticker','ticking/years_ticker','tool/box_select_tool','tool/box_zoom_tool','tool/click_tool','tool/crosshair_tool','tool/data_range_box_select_tool','tool/embed_tool','tool/hover_tool','tool/pan_tool','tool/preview_save_tool','tool/reset_tool','tool/resize_tool','tool/wheel_zoom_tool','tool/object_explorer_tool','server/serverrun','server/serverrun','widget/data_slider','widget/hbox','widget/vbox','widget/vboxmodelform','widget/textinput','widget/crossfilter','widget/object_explorer'],function(require, exports, module) {
     var Bokeh, glyph_factory, _oldJQ;
     if (!window.Float64Array) {
       console.warn("Float64Array is not supported. Using generic Array instead.");
@@ -64887,7 +64717,7 @@ define('server/usercontext/wrappertemplate',[],function(){
     }
     Bokeh = {};
     Bokeh.require = require;
-    Bokeh.version = '0.5.0rc2';
+    Bokeh.version = '0.5.1';
     Bokeh._ = require("underscore");
     Bokeh.$ = require("jquery");
     Bokeh.Backbone = require("backbone");
@@ -64965,6 +64795,7 @@ define('server/usercontext/wrappertemplate',[],function(){
     Bokeh.LogAxis = require("renderer/guide/log_axis");
     Bokeh.BoxSelection = require("renderer/overlay/box_selection");
     Bokeh.Properties = require("renderer/properties");
+    Bokeh.embed_core = require("server/embed_core");
     Bokeh.embed = require("server/embed");
     Bokeh.serverrun = require("server/serverrun");
     Bokeh.serverutils = require("server/serverutils");

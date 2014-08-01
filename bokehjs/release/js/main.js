@@ -7,7 +7,7 @@
     }
     Bokeh = {};
     Bokeh.require = require;
-    Bokeh.version = '0.5.0rc2';
+    Bokeh.version = '0.5.1';
     Bokeh._ = require("underscore");
     Bokeh.$ = require("jquery");
     Bokeh.Backbone = require("backbone");
@@ -85,6 +85,7 @@
     Bokeh.LogAxis = require("renderer/guide/log_axis");
     Bokeh.BoxSelection = require("renderer/overlay/box_selection");
     Bokeh.Properties = require("renderer/properties");
+    Bokeh.embed_core = require("server/embed_core");
     Bokeh.embed = require("server/embed");
     Bokeh.serverrun = require("server/serverrun");
     Bokeh.serverutils = require("server/serverutils");

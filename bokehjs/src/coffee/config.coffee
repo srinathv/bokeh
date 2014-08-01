@@ -2,7 +2,7 @@ require.config
     paths:
         jquery:            "vendor/jquery/jquery"
         jquery_ui:         "vendor/jquery-ui-amd/jquery-ui-1.10.0/jqueryui"
-        jquery_mousewheel: "vendor/jquery-mousewheel/jquery.mousewheel"
+        jquery_mousewheel: "vendor/jquery-mousewheel/jquery.mousewheel.min"
         jqrangeslider:     "vendor/jqrangeslider/jQAllRangeSliders-withRuler-min"
         handsontable:      "vendor/handsontable/jquery.handsontable"
         numeral:           "vendor/numeral/numeral"
@@ -14,6 +14,7 @@ require.config
         rbush:             "vendor/rbush/rbush"
         jstree:            "vendor/jstree/dist/jstree"
         gear_utils:        "vendor/gear-utils/gear-utils"
+        kiwi:              "vendor/kiwi/kiwi"
     shim:
         sprintf:
             exports: 'sprintf'
@@ -23,3 +24,5 @@ require.config
         jqrangeslider:
             deps: ["jquery_ui/core", "jquery_ui/widget", "jquery_ui/mouse", "jquery_mousewheel"]
             exports: "$.fn.rangeSlider"
+        kiwi:
+            exports: 'kiwi'

@@ -3,9 +3,12 @@ define [
   "underscore",
   "require",
 
-  "common/custom"
+  "common/custom",
+  "common/canvas",
+  "common/cartesian_frame",
   "common/gmap_plot",
   "common/grid_plot",
+  "common/layout_box",
   "common/plot",
   "common/plot_context",
 
@@ -89,6 +92,7 @@ define [
   'widget/tabs'
   'widget/dialog'
 
+  'transforms/binarysegment'
   'transforms/const'
   'transforms/count'
   'transforms/cuberoot'
@@ -116,6 +120,9 @@ define [
     GridPlot:                 'common/grid_plot'
     PlotContext:              'common/plot_context'
     PlotList:                 'common/plot_context'
+    Canvas:                   'common/canvas'
+    LayoutBox:                'common/layout_box'
+    CartesianFrame:           'common/cartesian_frame'
 
     DataFactorRange:          'range/data_factor_range'
     DataRange1d:              'range/data_range1d'
@@ -191,6 +198,7 @@ define [
     Tabs:                     'widget/tabs'
     Dialog:                   'widget/dialog'
 
+    BinarySegment:            'transforms/binarysegment'
     Const:                    'transforms/const'
     Count:                    'transforms/count'
     Cuberoot:                 'transforms/cuberoot'
