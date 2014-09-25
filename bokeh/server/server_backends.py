@@ -14,6 +14,7 @@ from flask import (
     request, session, flash, redirect, url_for, render_template, jsonify
 )
 import numpy as np
+import numpy.random as random
 from werkzeug.utils import secure_filename
 
 from bokeh.exceptions import DataIntegrityException
@@ -25,6 +26,7 @@ from bokeh.transforms import ar_downsample
 from .app import bokeh_app
 from .models import user
 from .models import UnauthorizedException
+
 
 class AbstractServerModelStorage(object):
     """Storage class for server side models (non backbone, that would be
@@ -44,6 +46,7 @@ class AbstractServerModelStorage(object):
         to make sure the object doesn't already exist
         """
         raise NotImplementedError
+
 
 class RedisServerModelStorage(object):
     def __init__(self, redisconn):
@@ -69,6 +72,7 @@ class RedisServerModelStorage(object):
                 pipe.set(key, json.dumps(val))
             pipe.execute()
 
+
 class InMemoryServerModelStorage(object):
     def __init__(self):
         self._data = {}
@@ -87,6 +91,7 @@ class InMemoryServerModelStorage(object):
         if key in self._data:
             raise DataIntegrityException("%s already exists" % key)
         self._data[key] = json.dumps(val)
+
 
 class ShelveServerModelStorage(object):
 
@@ -113,6 +118,7 @@ class ShelveServerModelStorage(object):
         _data[key] = json.dumps(val)
         _data.close()
 
+
 class AbstractAuthentication(object):
     def current_user_name(self):
         """obtain current user name from the current request
@@ -120,6 +126,7 @@ class AbstractAuthentication(object):
         object
         """
         raise NotImplementedError
+
     def login(self, username):
         """login the user, sets whatever request information is necessary
         (usually, session['username'] = username)
@@ -173,6 +180,7 @@ class AbstractAuthentication(object):
         """
         raise NotImplementedError
 
+
 class SingleUserAuthentication(AbstractAuthentication):
     def current_user_name(self):
         return "defaultuser"
@@ -189,6 +197,7 @@ class SingleUserAuthentication(AbstractAuthentication):
                                   str(uuid.uuid4()), apikey='nokey', docs=[])
         return bokehuser
 
+
 class MultiUserAuthentication(AbstractAuthentication):
 
     def login(self, username):
@@ -203,7 +212,7 @@ class MultiUserAuthentication(AbstractAuthentication):
     def current_user_name(self):
         # users can be authenticated by logging in (setting the session)
         # or by setting fields in the http header (api keys, etc..)
-        username =  session.get('username', None)
+        username = session.get('username', None)
         if username:
             return username
         else:
@@ -300,9 +309,11 @@ class MultiUserAuthentication(AbstractAuthentication):
             flash("incorrect login")
             return redirect(url_for('.login_get'))
         return redirect(url_for(".index"))
+
     def logout(self):
         session.pop('username', None)
         return redirect(url_for(".index"))
+
 
 class AbstractDataBackend(object):
     """These functions take a request_username parameter,
@@ -347,8 +358,9 @@ class AbstractDataBackend(object):
         returned by get_permissions
         """
 
-    #parameters for this are undefined at the moment
-    def get_data(self, request_username, datasource, parameters, plot_state, render_state):
+    # parameters for this are undefined at the moment
+    def get_data(self, request_username, datasource, parameters,
+                 plot_state, render_state):
         raise NotImplementedError
 
     def append_data(self, request_username, request_docid, data_url, datafile):
@@ -362,16 +374,17 @@ def user_url_root(data_directory, username):
         raise IOError('security error')
     return user_directory
 
+
 def safe_url_join(base_path, paths):
     proposed_path = posixpath.realpath(posixpath.join(base_path, *paths))
     if not proposed_path.startswith(base_path):
         raise IOError('security error')
     return proposed_path
 
+
 def safe_user_url_join(data_directory, username, path):
     user_path = user_url_root(data_directory, username)
     return safe_url_join(user_path, path)
-
 
 
 class FunctionBackend(AbstractDataBackend):
@@ -379,59 +392,63 @@ class FunctionBackend(AbstractDataBackend):
         Datasets are accessed by a URL starting with 'fn://'
     """
 
-    qty=10000
-    gauss = {'oneA': np.random.randn(qty),
-             'oneB': np.random.randn(qty),
-             'cats': np.random.randint(0,5,size=qty),
-             'hundredA': np.random.randn(qty)*100,
-             'hundredB': np.random.randn(qty)*100}
+    qty = 10000
+    gauss = {'oneA': random.randn(qty),
+             'oneB': random.randn(qty),
+             'cats': random.randint(0, 5, size=qty),
+             'hundredA': random.randn(qty)*100,
+             'hundredB': random.randn(qty)*100}
 
-    uniform = {'oneA': np.random.rand(qty),
-               'oneB': np.random.rand(qty),
-               'hundredA': np.random.rand(qty)*100,
-               'hundredB': np.random.rand(qty)*100}
+    uniform = {'oneA': random.rand(qty),
+               'oneB': random.rand(qty),
+               'hundredA': random.rand(qty)*100,
+               'hundredB': random.rand(qty)*100}
 
-    bivariate = {'A1': np.hstack([np.random.randn(qty/2), np.random.randn(qty/2)+1]),
-                 'A2': np.hstack([np.random.randn(qty/2), np.random.randn(qty/2)+2]),
-                 'A3': np.hstack([np.random.randn(qty/2), np.random.randn(qty/2)+3]),
-                 'A4': np.hstack([np.random.randn(qty/2), np.random.randn(qty/2)+4]),
-                 'A5': np.hstack([np.random.randn(qty/2), np.random.randn(qty/2)+5]),
-                 'B': np.random.randn(qty),
+    bivariate = {'A1': np.hstack([random.randn(qty/2), random.randn(qty/2)+1]),
+                 'A2': np.hstack([random.randn(qty/2), random.randn(qty/2)+2]),
+                 'A3': np.hstack([random.randn(qty/2), random.randn(qty/2)+3]),
+                 'A4': np.hstack([random.randn(qty/2), random.randn(qty/2)+4]),
+                 'A5': np.hstack([random.randn(qty/2), random.randn(qty/2)+5]),
+                 'B': random.randn(qty),
                  'C': np.hstack([np.zeros(qty/2), np.ones(qty/2)])}
 
     def __init__(self):
-      N = 1000
-      x = np.linspace(0, 10, N)
-      y = np.linspace(0, 10, N)
-      xx, yy = np.meshgrid(x, y)
-      self.sin_cos = np.sin(xx)*np.cos(yy)
+        N = 1000
+        x = np.linspace(0, 10, N)
+        y = np.linspace(0, 10, N)
+        xx, yy = np.meshgrid(x, y)
+        self.sin_cos = np.sin(xx)*np.cos(yy)
 
     def get_dataset(self, dataset):
-      """Get a known dataset by name.  The dataset may start with fn://, but does not need to."""
+        """
+        Get a known dataset by name.
+        The dataset may start with fn://, but does not need to.
+        """
 
-      if (dataset.startswith("fn://")):
-        dataset = dataset[5:]
+        if (dataset.startswith("fn://")):
+            dataset = dataset[5:]
 
-      if dataset in self.list_data_sources():
-        return self.__getattribute__(dataset)
-      else:
-        raise ValueError("Unknown (function-defined) dataset '{}'".format(dataset))
+        if dataset in self.list_data_sources():
+            return self.__getattribute__(dataset)
+        else:
+            raise ValueError("Unknown (function-defined) dataset '{}'".format(dataset))
 
     def list_data_sources(self, *args):
-      return ["sin_cos", "gauss","uniform", "bivariate"]
+        return ["sin_cos", "gauss", "uniform", "bivariate"]
 
-    def get_data(self, request_username, datasource, parameters, plot_state, render_state):
+    def get_data(self, request_username, datasource, parameters,
+                 plot_state, render_state):
         data_url = datasource.data_url
         resample_op = datasource.transform['resample']
 
         dataset = self.get_dataset(data_url)
 
         if resample_op == 'abstract rendering':
-          result = ar_downsample.downsample(dataset, datasource.transform, plot_state, render_state)
-          return result
+            result = ar_downsample.downsample(dataset, datasource.transform,
+                                              plot_state, render_state)
+            return result
         else:
-          raise ValueError("Unknown resample op '{}'".format(resample_op))
-
+            raise ValueError("Unknown resample op '{}'".format(resample_op))
 
 
 class HDF5DataBackend(AbstractDataBackend):
@@ -440,8 +457,9 @@ class HDF5DataBackend(AbstractDataBackend):
 
     def __init__(self, data_directory):
         self.data_directory = data_directory
+
         try:
-            from arraymanagement.client import ArrayClient
+            from ArrayManagement import ArrayClient
             self.client = ArrayClient(self.data_directory,
                                       configname="bokeh.server.hdf5_backend_config")
         except Exception as e:
@@ -468,7 +486,8 @@ class HDF5DataBackend(AbstractDataBackend):
     def line1d_downsample(self, request_username, data_url, data_parameters):
         dataset = self.client[data_url]
         (primary_column, domain_name, columns,
-         domain_limit, range_limit, domain_resolution, input_params) = data_parameters
+         domain_limit, range_limit, domain_resolution,
+         input_params) = data_parameters
 
         method = input_params['method']
 
@@ -480,12 +499,12 @@ class HDF5DataBackend(AbstractDataBackend):
         else:
             sample = dataset.select(start=0, stop=1)
             if sample[domain_name].dtype.kind == 'M':
-                #FIXME we need a conversion that won't truncate to ms
+                # FIXME we need a conversion that won't truncate to ms
                 domain_limit = np.array(domain_limit).astype('datetime64[ms]')
         all_columns = columns[:]
         if domain_name not in columns:
             all_columns.append(domain_name)
-        #some type coercion
+        # some type coercion
         result = dataset.select(where=[(domain_name, ">=", domain_limit[0]),
                                        (domain_name, "<=", domain_limit[1])],
                                 columns=all_columns)
@@ -498,8 +517,7 @@ class HDF5DataBackend(AbstractDataBackend):
                                             domain_resolution,
                                             method)
 
-        return result;
-
+        return result
 
     def heatmap_downsample(self, request_username, data_url,
                            parameters, plot_state):
@@ -509,11 +527,11 @@ class HDF5DataBackend(AbstractDataBackend):
          index_slice, data_slice,
          transpose, input_params) = parameters
 
-        x_resolution = plot_state['screen_x'].end - plot_state['screen_x'].start
-        y_resolution = plot_state['screen_y'].end - plot_state['screen_y'].start
+        x_resolution = plot_state['screen_x'].end-plot_state['screen_x'].start
+        y_resolution = plot_state['screen_y'].end-plot_state['screen_y'].start
 
         if data_slice:
-            #not supported for z yet...
+            # not supported for z yet...
             pass
         elif index_slice:
             print ('index_slice', index_slice)
@@ -521,7 +539,7 @@ class HDF5DataBackend(AbstractDataBackend):
             dataset = dataset[tuple(index_slices)]
         if transpose:
             dataset = dataset[:].T
-            #HACK
+            # HACK
             dataset = dataset[::-1]
         image_x_axis = np.linspace(global_x_range[0],
                                    global_x_range[1],
@@ -529,9 +547,11 @@ class HDF5DataBackend(AbstractDataBackend):
         image_y_axis = np.linspace(global_y_range[0],
                                    global_y_range[1],
                                    dataset.shape[0])
-        result = image_downsample.downsample(dataset, image_x_axis, image_y_axis,
-                                             plot_state['data_x'], plot_state['data_y'], x_resolution,
-                                             y_resolution)
+        result = image_downsample.downsample(
+                        dataset, image_x_axis, image_y_axis,
+                        plot_state['data_x'], plot_state['data_y'],
+                        x_resolution,
+                        y_resolution)
         output = {}
         output['image'] = [result['data']]
         output['x'] = [global_offset_x + result['offset_x']]
@@ -540,13 +560,12 @@ class HDF5DataBackend(AbstractDataBackend):
         output['dh'] = [result['dh']]
         return output
 
-    def get_data(self, request_username, datasource, parameters, plot_state, render_state):
+    def get_data(self, request_username, datasource, parameters,
+                 plot_state, render_state):
         data_url = datasource.data_url
         resample_op = datasource.transform['resample']
 
         if resample_op == 'line1d':
-
-
             return self.line1d_downsample(
                 request_username, data_url,
                 parameters)
@@ -555,12 +574,13 @@ class HDF5DataBackend(AbstractDataBackend):
                 request_username, data_url,
                 parameters, plot_state)
         elif resample_op == 'abstract rendering':
-          if (data_url.startswith("fn://")):
-            dataset = FunctionBackend().get_dataset(data_url)
-          else:
-            dataset = self.client[data_url]
-          result = ar_downsample.downsample(dataset, datasource.transform, plot_state, render_state)
-          return result
+            if (data_url.startswith("fn://")):
+                dataset = FunctionBackend().get_dataset(data_url)
+            else:
+                dataset = self.client[data_url]
+                result = ar_downsample.downsample(
+                            dataset, datasource.transform,
+                            plot_state, render_state)
+            return result
         else:
-          raise ValueError("Unknown resample op '{}'".format(resample_op))
-
+            raise ValueError("Unknown resample op '{}'".format(resample_op))
