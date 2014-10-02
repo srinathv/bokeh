@@ -7,6 +7,7 @@ from ..properties import (Instance, Any, Either,
 import bokeh.colors as colors
 import numpy as np
 import math
+import blaze
 
 import logging
 logger = logging.getLogger(__file__)
@@ -51,6 +52,7 @@ def _loadAR():
         globals()["general"] = import_module("abstract_rendering.general")
         globals()["glyphset"] = import_module("abstract_rendering.glyphset")
         globals()["npg"] = import_module("abstract_rendering.numpyglyphs")
+        globals()["blzg"] = import_module("abstract_rendering.blazeglyphs")
         globals()["numeric"] = import_module("abstract_rendering.numeric")
         globals()["util"] = import_module("abstract_rendering.util")
     except:
@@ -76,7 +78,10 @@ class Proxy(PlotObject):
 class Sum(Proxy):
     "Add up all incoming values"
     def reify(self, **kwargs):
-        return numeric.Sum()
+        if isinstance(glyphs, blzg.Glyphset):
+            return blzg.Sum()
+        else:
+            return numeric.Sum()
 
 
 class Count(Proxy):
@@ -85,6 +90,8 @@ class Count(Proxy):
         glyphs = kwargs.get('glyphset', None)
         if isinstance(glyphs, npg.Glyphset):
             return npg.PointCount()
+        elif isinstance(glyphs, blzg.Glyphset):
+            return blzg.Count()
         else:
             return numeric.Count()
 
@@ -95,6 +102,8 @@ class CountCategories(Proxy):
         glyphs = kwargs.get('glyphset', None)
         if isinstance(glyphs, npg.Glyphset):
             return npg.PointCountCategories()
+        elif isinstance(glyphs, blzg.Glyphset):
+            return blzg.CountCategories()
         else:
             return categories.CountCategories()
 
@@ -505,16 +514,22 @@ def mapping(source):
         raise ValueError("Unrecognized shader output type %s" % out)
 
 
-def make_glyphset(xcol, ycol, datacol, glyphspec, transform):
+def make_glyphset(dataset, xcol, ycol, datacol, glyphspec, transform):
     # TODO: Do more detection to find if it is an area implantation.
     #       If so, make a selector with the right shape pattern and use a point shaper
     shaper = _shaper(glyphspec, transform['points'])
+
     if isinstance(shaper, glyphset.ToPoint):
-        points = np.zeros((len(xcol), 4), order="F")
-        points[:, 0] = xcol
-        points[:, 1] = ycol
-        glyphs = npg.Glyphset(points, datacol)
+        if datacol:
+            basedata = dataset[[xcol, ycol, datacol]]
+        else:
+            datacol = dataset[[xcol]].relabel({xcol: "__data__"})
+            basedata = blaze.merge(dataset[[xcol, ycol]], datacol)
+        glyphs = blzg.Glyphset(basedata, xcol, ycol, "__data__")
     else:
+        xcol = dataset[xcol]
+        ycol = dataset[ycol]
+        datacol = data[datacol] if datacol else np.zeros(len(xcol))
         glyphs = glyphset.Glyphset([xcol, ycol], datacol,
                                    shaper, colMajor=True)
     return glyphs
@@ -545,20 +560,18 @@ def downsample(data, transform, plot_state, render_state):
     # Translate the resample parameters to server-side rendering....
     # TODO: Do more to preserve the 'natural' data form and have make_glyphset build the 'right thing' (tm)
 
-    if not isinstance(data, dict):
-        columns = [xcol, ycol] + ([datacol] if datacol else [])
-        data = data.select(columns=columns)
-
-    xcol = data[xcol]
-    ycol = data[ycol]
-    datacol = data[datacol] if datacol else np.zeros_like(xcol)
-    glyphs = make_glyphset(xcol, ycol, datacol, glyphspec, transform)
+    glyphs = make_glyphset(data, xcol, ycol, datacol, glyphspec, transform)
     shader = transform['shader']
 
+    xmin = blaze.compute(data[[xcol]].min())[0]
+    xmax = blaze.compute(data[[xcol]].max())[0]
+    ymin = blaze.compute(data[[ycol]].min())[0]
+    ymax = blaze.compute(data[[ycol]].max())[0]
+
     if shader.out == "image" or shader.out == "image_rgb":
-        rslt = downsample_image(xcol, ycol, glyphs, transform, plot_state)
+        rslt = downsample_image(glyphs, transform, plot_state, xmin, xmax, ymin, ymax)
     elif shader.out == "poly_line":
-        rslt = downsample_line(xcol, ycol, glyphs, transform, plot_state)
+        rslt = downsample_line(glyphs, transform, plot_state, xmin, xmax, ymin, ymax)
     else:
         raise ValueError("Unhandled shader output '{0}.".format(shader.out))
 
@@ -567,7 +580,7 @@ def downsample(data, transform, plot_state, render_state):
     return rslt
 
 
-def downsample_line(xcol, ycol, glyphs, transform, plot_state):
+def downsample_line(glyphs, transform, plot_state, xmin, xmax, ymin, ymax):
     logger.info("Starting line-producing downsample")
     screen_x_span = float(_span(plot_state['screen_x']))
     screen_y_span = float(_span(plot_state['screen_y']))
@@ -595,16 +608,16 @@ def downsample_line(xcol, ycol, glyphs, transform, plot_state):
                           shader.reify(),
                           plot_size, vt)
 
-        parts = shader.reformat(lines, xcol.min(), ycol.min())
+        parts = shader.reformat(lines, xmin, ymin)
 
-    parts['x_range'] = {'start': xcol.min(), 'end': xcol.max()}
-    parts['y_range'] = {'start': ycol.min(), 'end': ycol.max()}
+    parts['x_range'] = {'start': xmin, 'end': xmax}
+    parts['y_range'] = {'start': ymin, 'end': ymax}
 
     logger.info("Finished line-producing downsample")
     return parts
 
 
-def downsample_image(xcol, ycol, glyphs, transform, plot_state):
+def downsample_image(glyphs, transform, plot_state, xmin, xmax, ymin, ymax):
     logger.info("Starting image-producing downsample")
     screen_x_span = float(_span(plot_state['screen_x']))
     screen_y_span = float(_span(plot_state['screen_y']))
@@ -652,18 +665,18 @@ def downsample_image(xcol, ycol, glyphs, transform, plot_state):
             #     the bottom left and bottom right of the plot
             # y_range is the bottom and top data space values corresponding to
             #     the bottom left and top left of the plot
-            'x_range': {'start': xcol.min()*scale_x,
-                        'end': xcol.max()*scale_x},
-            'y_range': {'start': ycol.min()*scale_y,
-                        'end': ycol.max()*scale_y},
+            'x_range': {'start': xmin*scale_x,
+                        'end': xmax*scale_x},
+            'y_range': {'start': ymin*scale_y,
+                        'end': ymax*scale_y},
 
             # Data-image parameters.
             # x/y are lower left data-space coord of the image.
             # dw/dh are the width and height in data space
-            'x': [xcol.min()],
-            'y': [ycol.min()],
-            'dw': [xcol.max()-xcol.min()],
-            'dh': [ycol.max()-ycol.min()]
+            'x': [xmin],
+            'y': [ymin],
+            'dw': [xmax-xmin],
+            'dh': [ymax-ymin]
             }
 
     logger.info("Finished image-producing downsample")

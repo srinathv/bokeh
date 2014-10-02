@@ -4,11 +4,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 import json
-from os.path import join, exists
+from os.path import join, exists, ismount
 from os import makedirs, remove
 import posixpath
 import shelve
 import uuid
+import blaze
 
 from flask import (
     request, session, flash, redirect, url_for, render_template, jsonify
@@ -419,6 +420,13 @@ class FunctionBackend(AbstractDataBackend):
         xx, yy = np.meshgrid(x, y)
         self.sin_cos = np.sin(xx)*np.cos(yy)
 
+        self.gauss = blaze.Table(zip(*self.gauss.values()),
+                                 columns=self.gauss.keys())
+        self.uniform = blaze.Table(zip(*self.uniform.values()),
+                                   columns=self.uniform.keys())
+        self.bivariate = blaze.Table(zip(*self.bivariate.values()),
+                                     columns=self.bivariate.keys())
+
     def get_dataset(self, dataset):
         """
         Get a known dataset by name.
@@ -458,16 +466,6 @@ class HDF5DataBackend(AbstractDataBackend):
     def __init__(self, data_directory):
         self.data_directory = data_directory
 
-        try:
-            from ArrayManagement import ArrayClient
-            self.client = ArrayClient(self.data_directory,
-                                      configname="bokeh.server.hdf5_backend_config")
-        except Exception as e:
-            logger.exception(e)
-            logger.info("error importing arraymanagement")
-            logger.info("install arraymanagement from https://github.com/continuumio/ArrayManagement")
-            logger.info("or procede without remote data capabilities")
-
     def write(self, request_username, request_filename, fileobj):
         username_path = secure_filename(request_username)
         fpath = secure_filename(request_filename)
@@ -483,8 +481,26 @@ class HDF5DataBackend(AbstractDataBackend):
     def list_data_sources(self, request_username, username):
         return self.client[username].descendant_urls(ignore_groups=True)
 
-    def line1d_downsample(self, request_username, data_url, data_parameters):
-        dataset = self.client[data_url]
+    def url_split(self, path):
+        "splits foo/bar/baz into [foo, bar, baz]"
+        if path is None or ismount(path):
+            return []
+        else:
+            urlpath, path = posixpath.split(path)
+            results = self.url_split(urlpath)
+            results.append(path)
+            return results
+
+    def hdf_file(self, path):
+        parts = path.split(":")
+        file_path = join(self.data_directory, *self.url_split(parts[0]))
+        hdf_path = parts[1] if len(parts) > 1 else "/__data__/table"
+
+        store = blaze.HDF5(file_path, hdf_path)
+        table = blaze.Table(store)
+        return table
+
+    def line1d_downsample(self, request_username, dataset, data_parameters):
         (primary_column, domain_name, columns,
          domain_limit, range_limit, domain_resolution,
          input_params) = data_parameters
@@ -492,7 +508,7 @@ class HDF5DataBackend(AbstractDataBackend):
         method = input_params['method']
 
         if domain_limit == 'auto':
-            domain = dataset.select(columns=[domain_name])[domain_name]
+            domain = dataset[domain_name]
             domain_limit = [domain.min(), domain.max()]
             if domain.dtype.kind == "M":
                 domain_limit = np.array(domain_limit).astype('datetime64[ns]')
@@ -519,9 +535,9 @@ class HDF5DataBackend(AbstractDataBackend):
 
         return result
 
-    def heatmap_downsample(self, request_username, data_url,
+    def heatmap_downsample(self, request_username, dataset,
                            parameters, plot_state):
-        dataset = self.client[data_url].node
+        dataset = dataset.data
         (global_x_range, global_y_range,
          global_offset_x, global_offset_y,
          index_slice, data_slice,
@@ -565,22 +581,22 @@ class HDF5DataBackend(AbstractDataBackend):
         data_url = datasource.data_url
         resample_op = datasource.transform['resample']
 
+        if data_url.startswith("fn://"):
+            dataset = FunctionBackend().get_dataset(data_url)
+        else:
+            dataset = self.hdf_file(data_url).data
+
         if resample_op == 'line1d':
             return self.line1d_downsample(
-                request_username, data_url,
+                request_username, dataset,
                 parameters)
         elif resample_op == 'heatmap':
             return self.heatmap_downsample(
-                request_username, data_url,
+                request_username, dataset,
                 parameters, plot_state)
         elif resample_op == 'abstract rendering':
-            if (data_url.startswith("fn://")):
-                dataset = FunctionBackend().get_dataset(data_url)
-            else:
-                dataset = self.client[data_url]
-                result = ar_downsample.downsample(
-                            dataset, datasource.transform,
-                            plot_state, render_state)
-            return result
+            return ar_downsample.downsample(
+                        dataset, datasource.transform,
+                        plot_state, render_state)
         else:
             raise ValueError("Unknown resample op '{}'".format(resample_op))
