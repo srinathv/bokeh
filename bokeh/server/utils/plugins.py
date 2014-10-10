@@ -53,11 +53,9 @@ def object_page(prefix):
             obj = func(*args, **kwargs)
             clientdoc.add(obj)
             bokeh_app.backbone_storage.store_document(clientdoc)
-            if hasattr(obj, 'extra_generated_classes'):
-                extra_generated_classes = obj.extra_generated_classes
-            else:
-                extra_generated_classes = []
-
+            extra_generated_classes = getattr(obj, 'extra_generated_classes', [])
+            extra_scripts = getattr(obj, 'extra_scripts', [])
+            extra_js = getattr(obj, 'extra_js', [])
             resources = Resources()
             return render_template("oneobj.html",
                                    elementid=str(uuid.uuid4()),
@@ -65,6 +63,8 @@ def object_page(prefix):
                                    objid=obj._id,
                                    hide_navbar=True,
                                    extra_generated_classes=extra_generated_classes,
+                                   extra_scripts=extra_scripts,
+                                   extra_js=extra_js,
                                    splitjs=bokeh_app.splitjs,
                                    username=bokehuser.username,
                                    loglevel=resources.log_level)

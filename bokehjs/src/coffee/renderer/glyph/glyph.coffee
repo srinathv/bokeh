@@ -14,6 +14,11 @@ define [
     #TODO: There are glyph sub-type-vs-resample_op concordance issues...
     setup_server_data : () ->
       serversource = @mget('server_data_source')
+      if serversource.type != 'ServerDataSource'
+        serversource.update(@mget('data_source'), this)
+        return null
+
+
       # hack, call set data, becuase there are some attrs that we need
       # that are in it
       data = _.extend({}, @mget('data_source').get('data'), serversource.get('data'))
