@@ -3,7 +3,7 @@ from threading import Thread
 
 import json
 from six.moves.queue import Empty
-import zmq
+import zmq.green as zmq
 
 timeout = 0.1
 

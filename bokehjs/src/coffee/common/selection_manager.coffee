@@ -23,7 +23,6 @@ define [
       source = @get('source')
       if source != renderer_view.mget('data_source')
         logger.warn('select called with mis-matched data sources')
-
       indices = renderer_view.hit_test(geometry)
 
       selector = @_get_selector(tool)

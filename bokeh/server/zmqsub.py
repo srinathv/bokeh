@@ -1,7 +1,7 @@
 
 from threading import Thread
 
-import zmq
+import zmq.green as zmq
 
 timeout = 0.1
 

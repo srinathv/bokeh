@@ -71,7 +71,7 @@ define [
 
       return [sx, sy]
 
-    map_from_screen: (sx, sy, units, canvas) ->
+    map_from_screen: (sx, sy, units, canvas, x_name='default', y_name='default') ->
       if _.isArray(sx)
         dx = sx[..]
       else
@@ -89,8 +89,8 @@ define [
         x = sx
         y = sy
       else
-        [x, y] = @mapper.v_map_from_target(sx, sy)  # TODO: inplace?
-
+        x = @get('x_mappers')[x_name].v_map_from_target(sx)
+        y = @get('y_mappers')[y_name].v_map_from_target(sy)
       return [x, y]
 
     _get_ranges: (dim) ->

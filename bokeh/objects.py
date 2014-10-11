@@ -49,7 +49,6 @@ class ColumnsRef(HasProps):
 class ColumnDataSource(DataSource):
     # Maps names of columns to sequences or arrays
     data = Dict(String, Any)
-
     # Maps field/column name to a DataRange or FactorRange object. If the
     # field is not in the dict, then a range is created automatically.
     cont_ranges = Dict(String, Instance(".objects.Range"))

@@ -1,4 +1,6 @@
 from __future__ import absolute_import, print_function
+import gevent.monkey
+gevent.monkey.patch_all()
 
 import logging
 log = logging.getLogger(__name__)
@@ -36,6 +38,8 @@ from .app import bokeh_app
 from .models import user
 
 try:
+    import gevent.monkey
+    gevent.monkey.patch_all()
     from gevent.pywsgi import WSGIServer, WSGIHandler
 except ImportError:
     log.info("no gevent - your websockets won't work")
@@ -58,7 +62,6 @@ else:
             log = self.server.log
             if log:
                 log.debug(self.format_request() + '\n')
-
     def make_server(host, port, app):
         http_server = BokehWSGIServer((host, port), app, handler_class=BokehWSGIHandler, log=log)
         return http_server
