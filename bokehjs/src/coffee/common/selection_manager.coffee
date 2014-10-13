@@ -51,8 +51,8 @@ define [
       if tool?
         selector = @_get_selector(tool)
         selector.clear()
+      @get('source').trigger('deselect');
       @_save(null, [])
-
 
     _get_selector: (tool) ->
       _.setdefault(@selectors, tool.model.id, new Selector())
