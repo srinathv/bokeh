@@ -13,8 +13,10 @@ define [
       super(options)
       @render()
       @listenTo(@model, 'change', () => @render)
+    render : () ->
+      _.defer(@_render)
+    _render: () =>
 
-    render: () ->
       @$el.empty()
 
       [value_min, value_max] = @mget("value")
