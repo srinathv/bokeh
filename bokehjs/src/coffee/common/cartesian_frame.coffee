@@ -82,8 +82,8 @@ define [
       else
         dy = new Float64Array(sy.length)
         dy.set(sy)
-      sx = canvas.v_sx_to_vx(dx)
-      sy = canvas.v_sy_to_vy(dy)
+      # sx = canvas.v_sx_to_vx(dx)
+      # sy = canvas.v_sy_to_vy(dy)
 
       if units == 'screen'
         x = sx
