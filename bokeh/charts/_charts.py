@@ -143,7 +143,7 @@ class Chart(object):
         self.plot.x_range = x_range
         self.plot.y_range = y_range
 
-    def end_plot(self, groups):
+    def end_plot(self, groups, skip_add=False):
         """Add the legend to your plot, and the plot to a new Document.
 
         It also add the Document to a new Session in the case of server output.
@@ -166,6 +166,8 @@ class Chart(object):
         # Add to document and session if server output is asked
         self.doc = Document()
         self.doc.add(self.plot)
+        if skip_add:
+            return
         if self.server:
             if self.server is True:
                 self.servername = "untitled"

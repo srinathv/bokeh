@@ -232,7 +232,7 @@ class Bar(ChartObject):
             else:  # Grouped
                 self.chart.make_rect(self.source, quartet[3], quartet[1], "width_cat", quartet[0], colors[i], "white", None)
 
-    def show(self):
+    def show(self, skip_add=False):
         """Main Bar show method.
 
         It essentially checks for chained methods, creates the chart,
@@ -261,9 +261,10 @@ class Bar(ChartObject):
         # we add the glyphs into the plot
         self.draw(self._stacked)
         # we pass info to build the legend
-        self.end_plot(self.groups)
+        self.end_plot(self.groups, skip_add=skip_add)
         # and finally we show it
-        self.show_chart()
+        if not skip_add:
+            self.show_chart()
 
     # Some helper methods
     def _set_and_get(self, prefix, val, content):

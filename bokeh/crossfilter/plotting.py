@@ -67,7 +67,7 @@ def make_bar_plot(datasource, counts_name="counts",
 
     select_tool = _get_select_tool(plot)
     if select_tool:
-        select_tool.select_y = False
+        select_tool.dimensions = ['width']
 
     return plot
 
@@ -85,6 +85,7 @@ def make_histogram(datasource,
     end = np.max(datasource.data[centers_name]) - bar_width
     plot = make_bar_plot(
         datasource, counts_name=counts_name, centers_name=centers_name,
+        bar_width=bar_width,
         x_range=[start, end], plot_width=plot_width, plot_height=plot_height,
         tools=tools, title_text_font_size=title_text_font_size)
     return plot

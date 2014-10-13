@@ -53,7 +53,7 @@ class ColumnDataSource(DataSource):
     # field is not in the dict, then a range is created automatically.
     cont_ranges = Dict(String, Instance(".objects.Range"))
     discrete_ranges = Dict(String, Instance(".objects.Range"))
-
+    data_geometry = Dict(String, Any)
     def __init__(self, *args, **kw):
         """ Modify the basic DataSource/PlotObj constructor so that if we
         are called with a single argument that is a dict, then we treat
