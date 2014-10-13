@@ -121,13 +121,11 @@ def bulk_upsert(docid):
     clientdoc = bokeh_app.backbone_storage.get_document(docid)
     prune(clientdoc)
     data = protocol.deserialize_json(request.data.decode('utf-8'))
-    if client == 'python':
-        clientdoc.load(*data, events='none', dirty=True)
-    else:
-        clientdoc.load(*data, events='existing', dirty=True)
+    clientdoc.load(*data, events='existing', dirty=True)
     changed = bokeh_app.backbone_storage.store_document(clientdoc)
     msg = ws_update(clientdoc, changed)
-    return make_json(msg)
+    return make_json(protocol.serialize_json({'noop' : True}))
+
 
 def ws_update(clientdoc, models):
     attrs = clientdoc.dump(*models)
@@ -166,9 +164,8 @@ def create(docid, typename):
     modeldata = {'type' : typename,
                  'attributes' : modeldata}
     clientdoc.load(modeldata, dirty=True)
-    bokeh_app.backbone_storage.store_document(clientdoc)
-    ws_update(clientdoc, modeldata)
-    return protocol.serialize_json(modeldata[0]['attributes'])
+    changed = bokeh_app.backbone_storage.store_document(clientdoc)
+    ws_update(clientdoc, changed)
 
 @check_read_authentication_and_create_client
 def _bulkget(docid, typename=None):

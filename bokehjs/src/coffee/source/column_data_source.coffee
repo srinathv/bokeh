@@ -47,9 +47,47 @@ define [
 
   class ColumnDataSources extends Collection
     model: ColumnDataSource
+    initialize : () ->
+      @storage = {}
+      @sync_all = _.debounce(@_sync_all, 1000)
 
+    bulk_sync_attrs : (attrs) =>
+      for m in attrs
+        @storage[m.id] = m
+      @sync_all()
+
+    get_base: ()->
+      if not @_base
+        @_base = require('./common/base')
+      return @_base
+
+    _sync_all : () =>
+      tosave = {}
+      for own id, attrs of @storage
+        docid = attrs['docid']
+        if not tosave[docid]?
+          tosave[docid] = {}
+        tosave[docid][id] = attrs
+        delete @storage[id]
+      for own docid, attrs of tosave
+        url = @get_base().Config.prefix + "bokeh/bb/" + docid + "/bulkupsert"
+        bulkjson = []
+        for own id, attr of attrs
+          bulkjson.push({
+            'id' : attr.id,
+            'type' : @model.prototype.type,
+            'attributes' : attr
+          })
+        resp = $.ajax(
+          dataType: 'json'
+          url : url
+          data : JSON.stringify(bulkjson)
+          xhrField :
+            withCredentials : true
+          method : 'POST'
+          contentType : 'application/json'
+        )
   return {
     "Model": ColumnDataSource,
     "Collection": new ColumnDataSources()
   }
-

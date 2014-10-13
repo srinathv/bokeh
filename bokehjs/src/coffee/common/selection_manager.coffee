@@ -71,8 +71,14 @@ define [
       return @selectors[tool.model.id]
 
     _save: (selector, indices) ->
-      @get('source').save({
-        "selector": selector
-        "selection": indices
-        "data_geometry" : if selector then selector.get('data_geometry') else null
-      }, {patch: true})
+      source = @get('source')
+      docid = source.get('doc')
+      id = source.get('id')
+      data =
+        docid : docid
+        id : id
+        selector: selector
+        selection: indices
+        data_geometry : if selector then selector.get('data_geometry') else null
+      source.set(data)
+      source.collection.bulk_sync_attrs([data])
