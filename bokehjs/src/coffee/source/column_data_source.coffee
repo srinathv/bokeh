@@ -49,7 +49,7 @@ define [
     model: ColumnDataSource
     initialize : () ->
       @storage = {}
-      @sync_all = _.debounce(@_sync_all, 1000)
+      @sync_all = _.debounce(@_sync_all, 100)
 
     bulk_sync_attrs : (attrs) =>
       for m in attrs
@@ -78,6 +78,7 @@ define [
             'type' : @model.prototype.type,
             'attributes' : attr
           })
+        console.log('updating', bulkjson)
         resp = $.ajax(
           dataType: 'json'
           url : url
