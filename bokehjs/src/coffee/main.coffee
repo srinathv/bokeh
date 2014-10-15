@@ -4,6 +4,8 @@ define (require, exports, module) ->
   Bokeh.require = require
   Bokeh.version = '0.6.1'
 
+  Bokeh.index = require("common/base").index
+
   # set up logger
   logging = require("common/logging")
   Bokeh.logger = logging.logger
@@ -68,8 +70,7 @@ define (require, exports, module) ->
   Bokeh.Tooltip = require("renderer/annotation/tooltip")
 
   # glyphs
-  Bokeh.Glyph   = require("renderer/glyph/glyph")
-  glyph_factory = require("renderer/glyph/glyph_factory")
+  # ...
 
   # guides
   Bokeh.CategoricalAxis = require("renderer/guide/categorical_axis")

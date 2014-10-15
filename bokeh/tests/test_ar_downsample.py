@@ -8,7 +8,7 @@ from requests.exceptions import ConnectionError
 
 from .test_utils import skipIfPy3
 import bokeh.transforms.ar_downsample as ar_downsample
-from bokeh.objects import Range1d, ServerDataSource, Glyph
+from bokeh.objects import Range1d, ServerDataSource, GlyphRenderer
 from bokeh.plotting import square, output_server, curdoc
 import types
 
@@ -89,7 +89,7 @@ def start_bokeh_server(bokeh_port=5006):
 
 
 class Test_AR(unittest.TestCase):
-    bokeh_server = None 
+    bokeh_server = None
 
     @classmethod
     def setUpClass(cls):
@@ -147,14 +147,16 @@ class Test_AR(unittest.TestCase):
 
     def _glyphspec(self, plot):
         rend = ar_downsample._renderer(plot)
-        return rend.vm_serialize()['glyphspec']
+        spec = rend.glyph.vm_serialize()
+        spec['type'] = rend.glyph.__view_model__
+        return spec
 
     def test_replot_result_type(self):
         ar_downsample._loadAR()
         source = ServerDataSource(data_url="fn://bivariate", owner_username="defaultuser")
         plot = square('A', 'B', source=source)
 
-        expected = {"image": "image", "image_rgb": "image_rgba", "multi_line": "multi_line"}
+        expected = {"image": "Image", "image_rgb": "ImageRGBA", "multi_line": "MultiLine"}
 
         shaders = dict()
         for name in dir(ar_downsample):
@@ -224,7 +226,7 @@ class Test_AR(unittest.TestCase):
     def test_shaper_create(self):
         ar_downsample._loadAR()
 
-        glyphspec = {'type': 'square', 'size': {'default': 3}, 'radius': {'default': 3}}
+        glyphspec = {'type': 'Square', 'size': {'value': 3}, 'radius': {'value': 3}}
         self.assertIsInstance(ar_downsample._shaper(glyphspec, False), glyphset.ToRect)
         self.assertIsInstance(ar_downsample._shaper(glyphspec, True), glyphset.ToPoint)
         self.assertIsInstance(ar_downsample._shaper(glyphspec, True), glyphset.ToPoint)
@@ -232,10 +234,10 @@ class Test_AR(unittest.TestCase):
     def test_shaper_fail(self):
         ar_downsample._loadAR()
         with self.assertRaises(ValueError):
-            ar_downsample._shaper({'type': 'blah', 'size': {'default':  3}}, False)
+            ar_downsample._shaper({'type': 'blah', 'size': {'value': 3}}, False)
 
     def test_make_glyphset(self):
-        glyphspec = {'type': 'square', 'size': {'default': 1}}
+        glyphspec = {'type': 'Square', 'size': {'value': 1}}
         transform = {'points': True}
         glyphs = ar_downsample.make_glyphset([1], [1], [1], glyphspec, transform)
         self.assertIsInstance(glyphs, npg.Glyphset, "Point-optimized numpy version")
@@ -355,7 +357,7 @@ class Test_AR(unittest.TestCase):
 
     # -------------------- Recipies ------------
     def _find_source(self, plot):
-        return [r for r in plot.renderers if (isinstance(r, Glyph)
+        return [r for r in plot.renderers if (isinstance(r, GlyphRenderer)
                     and hasattr(r, "server_data_source")
                     and r.server_data_source is not None)][0].server_data_source
 

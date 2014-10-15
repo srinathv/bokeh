@@ -13,7 +13,7 @@ import warnings
 
 from . import _glyph_functions
 from .enums import DatetimeUnits, Dimension, Location, MapType, Orientation, Units
-from .glyphs import BaseGlyph
+from .glyphs import Glyph
 from .mixins import LineProps, TextProps
 from .plot_object import PlotObject
 from .properties import (
@@ -283,7 +283,7 @@ class DatetimeTickFormatter(TickFormatter):
     """ Represents a categorical tick formatter for an axis object """
     formats = Dict(Enum(DatetimeUnits), List(String))
 
-class Glyph(Renderer):
+class GlyphRenderer(Renderer):
     server_data_source = Instance(ServerDataSource)
     data_source = Instance(DataSource)
     x_range_name = String('default')
@@ -292,50 +292,12 @@ class Glyph(Renderer):
     # How to intepret the values in the data_source
     units = Enum(Units)
 
-    glyph = Instance(BaseGlyph)
+    glyph = Instance(Glyph)
 
     # Optional glyph used when data is selected.
-    selection_glyph = Instance(BaseGlyph)
+    selection_glyph = Instance(Glyph)
     # Optional glyph used when data is unselected.
-    nonselection_glyph = Instance(BaseGlyph)
-
-    def vm_serialize(self):
-        # Glyphs need to serialize their state a little differently,
-        # because the internal glyph instance is turned into a glyphspec
-        data =  {"id" : self._id,
-                 "data_source": self.data_source,
-                 "server_data_source" : self.server_data_source,
-                 "x_range_name": self.x_range_name,
-                 "y_range_name": self.y_range_name,
-                 "glyphspec": self.glyph.to_glyphspec(),
-                 "name": self.name,
-                 }
-        if self.selection_glyph:
-            data['selection_glyphspec'] = self.selection_glyph.to_glyphspec()
-        if self.nonselection_glyph:
-            data['nonselection_glyphspec'] = self.nonselection_glyph.to_glyphspec()
-        return data
-
-    def finalize(self, models):
-        props = super(Glyph, self).finalize(models)
-
-        if hasattr(self, "_special_props"):
-            glyphspec = self._special_props.pop('glyphspec', None)
-            if glyphspec is not None:
-                cls = PlotObject.get_class(glyphspec.pop('type'))
-                props['glyph'] = cls(**glyphspec)
-
-            selection_glyphspec = self._special_props.pop('selection_glyphspec', None)
-            if selection_glyphspec is not None:
-                cls = PlotObject.get_class(selection_glyphspec.pop('type'))
-                props['selection_glyph'] = cls(**selection_glyphspec)
-
-            nonselection_glyphspec = self._special_props.pop('nonselection_glyphspec', None)
-            if nonselection_glyphspec is not None:
-                cls = PlotObject.get_class(nonselection_glyphspec.pop('type'))
-                props['nonselection_glyph'] = cls(**nonselection_glyphspec)
-
-        return props
+    nonselection_glyph = Instance(Glyph)
 
 class Widget(PlotObject):
     disabled = Bool(False)
@@ -458,7 +420,7 @@ class Plot(Widget):
 
         Args:
             source: (ColumnDataSource) : a data source for the glyphs to all use
-            glyph (BaseGlyph) : the glyph to add to the Plot
+            glyph (Glyph) : the glyph to add to the Plot
 
         Keyword Arguments:
             Any additional keyword arguments are passed on as-is to the
@@ -468,10 +430,10 @@ class Plot(Widget):
             glyph : Glyph
 
         '''
-        if not isinstance(glyph, BaseGlyph):
-            raise ValueError("glyph arguments to add_glyph must be BaseGlyph subclass.")
+        if not isinstance(glyph, Glyph):
+            raise ValueError("glyph arguments to add_glyph must be Glyph subclass.")
 
-        g = Glyph(data_source=source, glyph=glyph, **kw)
+        g = GlyphRenderer(data_source=source, glyph=glyph, **kw)
         self.renderers.append(g)
         return g
 
@@ -745,6 +707,7 @@ class BoxSelectionOverlay(Renderer):
     tool = Instance(Tool)
 
 class HoverTool(Tool):
+    names = List(String)
     renderers = List(Instance(Renderer))
     tooltips = Dict(String, String)
     always_active = Bool(True)
@@ -771,7 +734,7 @@ class Legend(Renderer):
 
     legend_padding = Int(10)
     legend_spacing = Int(3)
-    legends = Dict(String, List(Instance(Glyph)))
+    legends = Dict(String, List(Instance(GlyphRenderer)))
 
 class PlotContext(PlotObject):
     """ A container for multiple plot objects. """

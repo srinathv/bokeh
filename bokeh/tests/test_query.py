@@ -1,13 +1,12 @@
-
 import unittest
 
 import bokeh.query as query
 
 from bokeh.objects import (
-    Axis, BoxZoomTool, ColumnDataSource, DatetimeAxis, Glyph, Grid, LinearAxis, LogAxis,
-    PanTool, Plot, PreviewSaveTool, Range1d, ResetTool, ResizeTool, Tool, WheelZoomTool
+    Axis, BoxZoomTool, ColumnDataSource, DatetimeAxis, GlyphRenderer, Grid, LinearAxis,
+    LogAxis, PanTool, Plot, PreviewSaveTool, Range1d, ResetTool, ResizeTool, Tool, WheelZoomTool,
 )
-from bokeh.glyphs import Circle, Line, Rect
+from bokeh.glyphs import Glyph, Circle, Line, Rect
 
 def large_plot():
     source = ColumnDataSource(data=dict(x=[0, 1], y=[0, 1]))
@@ -191,7 +190,7 @@ class TestFind(unittest.TestCase):
         self.assertEqual(len(res), 2)
 
         res = list(
-            query.find(self.plot.references(), dict(type=Glyph, name="mycircle"))
+            query.find(self.plot.references(), dict(type=GlyphRenderer, name="mycircle"))
         )
         self.assertEqual(len(res), 1)
 
@@ -227,8 +226,6 @@ class TestFind(unittest.TestCase):
             query.find(self.plot.references(), {'size': {LT: 5}})
         )
         self.assertEqual(len(res), 0)
-
-
 
 if __name__ == "__main__":
     unittest.main()
