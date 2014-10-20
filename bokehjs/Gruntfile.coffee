@@ -48,9 +48,6 @@ module.exports = (grunt) ->
           src: ['**/*']
           dest : 'build/js/vendor'
         ]
-      spectrogram:
-        src: 'build/js/bokeh.js'
-        dest: 'build/demo/spectrogram/static/bokeh.js'
 
     clean:
       all : ['build'],
@@ -67,6 +64,8 @@ module.exports = (grunt) ->
           dest: 'build/css',   # destination path prefix
           ext: '.css',         # dest filepaths will have this extension
         }]
+    lesslint:
+      src: ['src/less/*.less']
 
     coffee:
       compile:
@@ -94,10 +93,6 @@ module.exports = (grunt) ->
         ext: '.js'             # file extension for compiled files
         options:
           sourceMap : true
-      spectrogram:
-        files: {
-          'build/demo/spectrogram/static/spectrogram.js': 'demo/spectrogram/coffee/spectrogram.coffee'
-        }
 
     requirejs:
       options:
@@ -205,11 +200,12 @@ module.exports = (grunt) ->
   grunt.loadNpmTasks("grunt-contrib-connect")
   grunt.loadNpmTasks("grunt-eco")
   grunt.loadNpmTasks("grunt-groc")
+  grunt.loadNpmTasks('grunt-lesslint')
 
   grunt.registerTask("default",   ["build", "test"])
   grunt.registerTask("buildcopy", ["copy:template", "copy:test", "copy:demo", "copy:vendor"]) # better way??
   grunt.registerTask("build",     ["coffee", "less", "buildcopy", "eco"])
-  grunt.registerTask("deploy",    ["build",  "requirejs", "cssmin", "copy:spectrogram"])
+  grunt.registerTask("deploy",    ["build",  "requirejs", "cssmin"])
   grunt.registerTask("test",      ["build", "connect", "qunit"])
   grunt.registerTask("serve",     ["connect:server:keepalive"])
   grunt.registerTask("release",   ["deploy", "copy:release"])
