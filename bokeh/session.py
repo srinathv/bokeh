@@ -82,8 +82,9 @@ class Session(object):
             username         = "defaultuser",
             load_from_config = True,
             configdir        = None,
+            sess = None #http session
         ):
-
+        if sess: self._http_session = sess
         self.name = name
 
         if not root_url.endswith("/"):
@@ -710,5 +711,3 @@ class Session(object):
         store.createArray("/", "__data__", obj=arr)
         store.close()
         return name
-
-
