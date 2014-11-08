@@ -7,7 +7,7 @@ from flask import request
 from bokeh import protocol
 
 from .bbauth import (
-    check_read_authentication
+    check_read_authentication,
     check_write_authentication
 )
 from ..app import bokeh_app
