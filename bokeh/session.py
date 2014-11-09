@@ -568,20 +568,27 @@ class Session(object):
         """
         json_objs = self.pull()
 
+        #isolate plot context from other objects
         plot_contexts = [x for x in json_objs if x['type'] == 'PlotContext']
         other_objects = [x for x in json_objs if x['type'] != 'PlotContext']
 
         plot_context_json = plot_contexts[0]
         children = set([x['id'] for x in plot_context_json['attributes']['children']])
 
+        #merge children of both context together
         for child in doc.context.children:
             ref = child.ref
             if ref['id'] not in children:
                 plot_context_json['attributes']['children'].append(ref)
 
+        #set new docid
         doc.docid = self.docid
-        doc.context._id = plot_context_json['id']
+
+        #load json models
         doc.load(plot_context_json, *other_objects)
+
+        #set new context object
+        doc.context = doc._models[plot_context_json['id']]
 
     def load_object(self, obj, doc):
         """ Update an object in a document with data pulled from the server.
@@ -710,5 +717,3 @@ class Session(object):
         store.createArray("/", "__data__", obj=arr)
         store.close()
         return name
-
-

@@ -83,6 +83,7 @@ class Document(object):
         except AttributeError:
             pass
         pcs = [x for x in self._models.values() if x.__view_model__ == 'PlotContext']
+        pcs = [x for x in pcs if x._id != value._id]
         if len(pcs) != 0:
             raise DataIntegrityException("too many plot contexts found")
         self._add(value)
