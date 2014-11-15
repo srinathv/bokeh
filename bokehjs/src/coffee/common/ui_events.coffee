@@ -16,7 +16,6 @@ define [
       hit_area = @get('hit_area')
 
       @hammer = new Hammer(hit_area[0])
-
       # This is to be able to distinguish double taps from single taps
       @hammer.get('doubletap').recognizeWith('tap')
       @hammer.get('tap').requireFailure('doubletap')
@@ -26,7 +25,10 @@ define [
       @hammer.on('tap', (e) => @_tap(e))
       @hammer.on('press', (e) => @_press(e))
 
-      @hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL })
+      @hammer.get('pan').set(
+        direction: Hammer.DIRECTION_NONE
+        threshold : -1
+      )
       @hammer.on('panstart', (e) => @_pan_start(e))
       @hammer.on('pan', (e) => @_pan(e))
       @hammer.on('panend', (e) => @_pan_end(e))
@@ -131,10 +133,12 @@ define [
       @trigger('doubletap', e)
 
     _press: (e) ->
+      e.srcEvent.stopPropagation()
       @_bokify_hammer(e)
       @_trigger('press', e)
 
     _pan_start: (e) ->
+      e.srcEvent.stopPropagation()
       @_bokify_hammer(e)
       # back out delta to get original center point
       e.bokeh.sx -= e.deltaX
@@ -142,10 +146,12 @@ define [
       @_trigger('pan:start', e)
 
     _pan: (e) ->
+      e.srcEvent.stopPropagation()
       @_bokify_hammer(e)
       @_trigger('pan', e)
 
     _pan_end: (e) ->
+      e.srcEvent.stopPropagation()
       @_bokify_hammer(e)
       @_trigger('pan:end', e)
 
@@ -202,4 +208,3 @@ define [
     _key_up: (e) ->
       # NOTE: keyup event triggered unconditionally
       @trigger('keyup', e)
-
