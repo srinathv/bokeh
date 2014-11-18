@@ -24,7 +24,11 @@ define [
 
       @xmapper = @plot_view.frame.get('x_mappers')[@mget("x_range_name")]
       @ymapper = @plot_view.frame.get('y_mappers')[@mget("y_range_name")]
-
+      ## I would like to unify server_data_sources with the regular column datasource
+      ## for blaze source
+      if (@mget('data_source')? and @mget('data_source').update? and
+          _.isFunction(@mget('data_source').update))
+        @mget('data_source').update()
       if @mget('server_data_source')
         @setup_server_data()
       @listenTo(this, 'change:server_data_source', @setup_server_data)

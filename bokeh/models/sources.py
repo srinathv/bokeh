@@ -108,3 +108,10 @@ class ServerDataSource(DataSource):
     # The 'Any' is used to pass primtives around.  Minimally, a tag to say which downsample routine to use.  In some downsamplers, parameters are passed this way too.
     # TODO: Find/create a property type for 'any primitive/atomic value'
     transform = Dict(String,Either(Instance(PlotObject), Any))
+
+class RemoteDatasource(DataSource):
+    data = Dict(String, Any)
+
+class BlazeDataSource(RemoteDatasource):
+    data_url = String()
+    expr = Dict(String, Any())

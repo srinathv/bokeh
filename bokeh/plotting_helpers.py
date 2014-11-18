@@ -10,7 +10,7 @@ from . import glyphs
 
 from .objects import (
     BoxSelectionOverlay, BoxSelectTool, BoxZoomTool, CategoricalAxis,
-    ColumnDataSource, TapTool, CrosshairTool, DataRange1d, DatetimeAxis,
+    ColumnDataSource, RemoteDatasource, TapTool, CrosshairTool, DataRange1d, DatetimeAxis,
     FactorRange, Grid, HoverTool, LassoSelectTool, Legend, LinearAxis,
     LogAxis, PanTool, Plot, PolySelectTool,
     PreviewSaveTool, Range, Range1d, ResetTool, ResizeTool, Tool,
@@ -117,7 +117,9 @@ def _match_data_params(argnames, glyphclass, datasource, serversource,
             if glyphclass == glyphs.Text:
                 # TODO (bev) this is hacky, now that text is a DataSpec, it has to be a sequence
                 glyph_val = [val]
-            elif serversource is None and val not in datasource.column_names:
+            elif (serversource is None and \
+                  not isinstance(datasource, RemoteDatasource) and \
+                  val not in datasource.column_names):
                 raise RuntimeError("Column name '%s' does not appear in data source %r" % (val, datasource))
             else:
                 if val not in datasource.column_names:
