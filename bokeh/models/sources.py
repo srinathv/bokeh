@@ -115,3 +115,4 @@ class RemoteDatasource(DataSource):
 class BlazeDataSource(RemoteDatasource):
     data_url = String()
     expr = Dict(String, Any())
+    polling_interval = Int() # in millis

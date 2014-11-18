@@ -28,7 +28,9 @@ define [
       ## for blaze source
       if (@mget('data_source')? and @mget('data_source').update? and
           _.isFunction(@mget('data_source').update))
-        @mget('data_source').update()
+        @mget('data_source').update([this.xmapper.get('source_range'),
+          this.ymapper.get('source_range')
+        ])
       if @mget('server_data_source')
         @setup_server_data()
       @listenTo(this, 'change:server_data_source', @setup_server_data)
