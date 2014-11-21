@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from six.moves.urllib.parse import urlparse
 
 from ..plot_object import PlotObject
 from ..properties import HasProps
@@ -116,3 +117,4 @@ class BlazeDataSource(RemoteDatasource):
     data_url = String()
     expr = Dict(String, Any())
     polling_interval = Int() # in millis
+    name = String()
