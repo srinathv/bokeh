@@ -124,7 +124,6 @@ def _match_data_params(argnames, glyphclass, datasource, serversource,
             else:
                 if val not in datasource.column_names:
                     datasource.column_names.append(val)
-                    datasource.data[val] = []
                 units = getattr(dataspecs[var], 'units', 'data')
                 glyph_val = {'field' : val, 'units' : units}
         elif isinstance(val, np.ndarray):
