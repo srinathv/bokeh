@@ -6,8 +6,8 @@ import pandas as pd
 from bokeh.browserlib import view
 from bokeh.document import Document
 from bokeh.embed import file_html
-from bokeh.glyphs import Circle, Line
-from bokeh.objects import (
+from bokeh.models.glyphs import Circle, Line
+from bokeh.models import (
     ColumnDataSource, Grid, GridPlot, LinearAxis, Plot, Range1d
 )
 from bokeh.resources import INLINE
@@ -84,7 +84,7 @@ IV  = make_plot('IV',  'xiv',  'yiv')
 
 grid = GridPlot(children=[[I, II], [III, IV]], plot_width=800)
 
-doc = Document( )
+doc = Document()
 doc.add(grid)
 
 if __name__ == "__main__":

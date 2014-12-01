@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 from ..plot_object import PlotObject
-from ..properties import Bool, Int, String, Color, Enum, Instance, List, Dict, Include
+from ..properties import Bool, Int, String, Color, Enum, Auto, Instance, Either, List, Dict, Include
 from ..mixins import LineProps, TextProps
 from .. enums import Location
 
@@ -150,12 +150,10 @@ class Plot(Widget):
         self.renderers.append(g)
         return g
 
-    data_sources = List(Instance(DataSource))
-
     x_range = Instance(Range)
     y_range = Instance(Range)
-    x_mapper_type = String('auto')
-    y_mapper_type = String('auto')
+    x_mapper_type = Either(Auto, String)
+    y_mapper_type = Either(Auto, String)
 
     extra_x_ranges = Dict(String, Instance(Range1d))
     extra_y_ranges = Dict(String, Instance(Range1d))
@@ -176,6 +174,7 @@ class Plot(Widget):
     below = List(Instance(PlotObject))
 
     toolbar_location = Enum(Location)
+    logo = Enum("normal", "grey")
 
     plot_height = Int(600)
     plot_width = Int(600)
@@ -233,7 +232,7 @@ class GridPlot(Plot):
             rwo (int) : index of the row to return
 
         Returns:
-            seq[Plot] : rwo of plots
+            seq[Plot] : row of plots
 
         '''
         try:

@@ -10,11 +10,11 @@ logging.basicConfig(level=logging.DEBUG)
 import numpy as np
 
 from bokeh.plotting import line
-from bokeh.objects import Plot, ColumnDataSource, Range1d
+from bokeh.models import Plot, ColumnDataSource, Range1d
 from bokeh.properties import Instance
 from bokeh.server.app import bokeh_app
 from bokeh.server.utils.plugins import object_page
-from bokeh.widgets import HBox, Slider, TextInput, VBoxForm
+from bokeh.models.widgets import HBox, Slider, TextInput, VBoxForm
 
 class SlidersApp(HBox):
     extra_generated_classes = [["SlidersApp", "SlidersApp", "HBox"]]
@@ -62,7 +62,9 @@ class SlidersApp(HBox):
             value=1.0, start=0.1, end=5.1
         )
 
-        obj.plot = line('x', 'y', source=obj.source,
+        toolset = "crosshair,pan,reset,resize,save,wheel_zoom"
+
+        obj.plot = line('x', 'y', tools=toolset, source=obj.source,
                         plot_width=400, plot_height=400,
                         line_width=3, line_alpha=0.6,
                         title=obj.text.value,
