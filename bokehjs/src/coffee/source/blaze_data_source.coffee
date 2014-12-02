@@ -24,7 +24,10 @@ define [
         return null
       @updated = true
       @_update()
-
+      @listenTo(this, 'change:data', () =>
+        if _.keys(@get('data')).length == 0 and @cached? and _.keys(@cached).length > 0
+          @set('data', @cached)
+      )
     _update : () =>
       console.log('AJAX')
       $.ajax(
@@ -48,6 +51,7 @@ define [
       orig_data = _.clone(@get('data'))
       _.extend(orig_data, data_dict)
       @set('data', orig_data)
+      @cached = orig_data
       #TODO: handle stopping when plot is removed?
       if @get('polling_interval')
         setTimeout(@_update, @get('polling_interval'))
