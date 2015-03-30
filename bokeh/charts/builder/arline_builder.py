@@ -21,8 +21,9 @@ from six import string_types
 import numpy as np
 
 from ..utils import cycle_colors
-from .._builder import Builder, create_and_build
-from ...models import ColumnDataSource, DataRange1d, GlyphRenderer, Range1d
+from .._builder import create_and_build
+from .._arbuilder import ARBuilder
+from ...models import ServerDataSource, GlyphRenderer, Range1d
 from ...models.glyphs import Line as LineGlyph
 from ...properties import Any
 
@@ -31,7 +32,7 @@ from ...properties import Any
 #-----------------------------------------------------------------------------
 
 
-def Line(values, index=None, **kws):
+def Line(blaze_table, index, **kws):
     """ Create a line chart using :class:`LineBuilder <bokeh.charts.builder.line_builder.LineBuilder>` to
     render the geometry from values and index.
 
@@ -68,10 +69,10 @@ def Line(values, index=None, **kws):
         show(line)
 
     """
-    return create_and_build(LineBuilder, values, index=index, **kws)
+    return create_and_build(LineBuilder, blaze_table, index=index, **kws)
 
 
-class LineBuilder(Builder):
+class LineBuilder(ARBuilder):
     """This is the Line class and it is in charge of plotting
     Line charts in an easy and intuitive way.
     Essentially, we provide a way to ingest the data, make the proper
@@ -90,52 +91,40 @@ class LineBuilder(Builder):
         mapping to be used as index (and not as data
         series) if area.values is a mapping (like a dict,
         an OrderedDict or a pandas DataFrame)
-
     """)
 
-    def _process_data(self):
-        """Calculate the chart properties accordingly from line.values.
-        Then build a dict containing references to all the points to be
-        used by the line glyph inside the ``_yield_renderers`` method.
-        """
-        import pdb; pdb.set_trace()
-        self._data = dict()
-        # list to save all the attributes we are going to create
-        self._attr = []
-        xs = self._values_index
-        self.set_and_get("x", "", np.array(xs))
-        for col, values in self._values.items():
-            if isinstance(self.index, string_types) and col == self.index:
-                continue
-
-            # save every new group we find
-            self._groups.append(col)
-            self.set_and_get("y_", col, values)
 
     def _set_sources(self):
         """
         Push the Line data into the ColumnDataSource and calculate the
         proper ranges.
         """
-        self._source = ColumnDataSource(self._data)
-        self.x_range = DataRange1d()
-
-        y_names = self._attr[1:]
-        endy = max(max(self._data[i]) for i in y_names)
-        starty = min(min(self._data[i]) for i in y_names)
-        self.y_range = Range1d(
-            start=starty - 0.1 * (endy - starty),
-            end=endy + 0.1 * (endy - starty)
-        )
+        from blaze import compute
+        self._fields = [x for x in self._values.columns if x != self.index]
+        maxes = max([compute(self._values[f].max()) for f in self._fields])
+        mins = min([compute(self._values[f].min()) for f in self._fields])
+        max_idx = compute(self._values[self.index].max())
+        min_idx = compute(self._values[self.index].min())
+        self._sources = {}
+        for f in self._fields:
+            self._sources[f] = ServerDataSource(transform={
+                'resample': 'line1d',
+                'direction': 'x',
+                'auto_bounds' : False,
+                'method': 'minmax'
+            })
+            self._sources[f].from_blaze(self._values, local=True)
+        print (min_idx, max_idx, mins, maxes)
+        self.x_range = Range1d(start=min_idx, end=max_idx)
+        self.y_range = Range1d(start=mins, end=maxes)
 
     def _yield_renderers(self):
         """Use the line glyphs to connect the xy points in the Line.
         Takes reference points from the data loaded at the ColumnDataSource.
         """
-        import pdb;pdb.set_trace()
-        colors = cycle_colors(self._attr, self.palette)
-        for i, duplet in enumerate(self._attr[1:], start=1):
-            glyph = LineGlyph(x='x', y=duplet, line_color=colors[i - 1])
-            renderer = GlyphRenderer(data_source=self._source, glyph=glyph)
-            self._legends.append((self._groups[i-1], [renderer]))
+        colors = cycle_colors(self._fields, self.palette)
+        for idx, f in enumerate(self._fields):
+            glyph = LineGlyph(x=self.index, y=f, line_color=colors[idx])
+            renderer = GlyphRenderer(data_source=self._sources[f], glyph=glyph)
+            self._legends.append((f, [renderer]))
             yield renderer

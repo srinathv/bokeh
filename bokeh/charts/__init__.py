@@ -4,6 +4,7 @@ from .builder.area_builder import Area; Area
 from .builder.donut_builder import Donut; Donut
 from .builder.dot_builder import Dot; Dot
 from .builder.line_builder import Line; Line
+from .builder.arline_builder import Line as ARLine; ARLine
 from .builder.step_builder import Step; Step
 from .builder.histogram_builder import Histogram; Histogram
 from .builder.bar_builder import Bar; Bar

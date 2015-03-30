@@ -22,11 +22,13 @@ import json
 from os import makedirs
 from os.path import expanduser, exists, join
 import tempfile
+from contextlib import contextmanager
+import shutil
 
 #------------
 # third party
 #------------
-from six.moves.urllib.parse import urljoin, urlencode
+from six.moves.urllib.parse import urljoin, urlencode, urlsplit
 from requests.exceptions import ConnectionError
 
 #---------
@@ -51,6 +53,14 @@ from .util.notebook import publish_display_data
 from .util.serialization import dump, get_json, urljoin
 
 DEFAULT_SERVER_URL = "http://localhost:5006/"
+
+@contextmanager
+def tempdir():
+    path = tempfile.mkdtemp()
+    try:
+        yield path
+    finally:
+        shutil.rmtree(path)
 
 class Session(object):
     """ Encapsulate a connection to a document stored on a Bokeh Server.
@@ -277,7 +287,22 @@ class Session(object):
             source : ServerDataSource
 
         """
-        raise NotImplementedError
+        from mbs.client import upload, configure
+        with tempdir() as fpath:
+            h5path = join(fpath, "%s.h5" % name)
+            with pd.get_store(h5path) as store:
+                store[name] = data
+            result = upload(self.root_url, h5path, session=self.http_session)
+        server_loc = result['path']
+        server_uri = "hdfstore://%s::%s" % (server_loc, name)
+        return configure(self.root_url, server_uri, name)['name']
+
+
+    def blaze_data(self):
+        from blaze.server.client import Client
+        from blaze import Data
+        c = Client(self.root_url)
+        return Data(c)
 
     def list_data(self):
         """ Return all the data soruces on the server.
@@ -541,9 +566,10 @@ class Session(object):
             None
 
         """
-        self.gc()
+        #self.gc()
         json_objs = self.pull()
         doc.merge(json_objs)
+        doc.prune()
         doc.docid = self.docid
 
     def load_object(self, obj, doc):
@@ -581,6 +607,7 @@ class Session(object):
             models = [x for x in models if getattr(x, '_dirty', False)]
 
         json_objs = doc.dump(*models)
+        print (len(json_objs))
         self.push(*json_objs)
 
         for model in models:
