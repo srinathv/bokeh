@@ -14,16 +14,28 @@ To run the just the python unit tests, run the command:
 
 .. code-block:: sh
 
-    cd bokeh
-    py.test
+    py.test -m 'not (js or examples)' 
+
+
+To run just the examples, run the command:
+
+.. code-block:: sh
+
+    py.test -m examples 
 
 To run just the BokehJS unit tests, execute:
 
 .. code-block:: sh
 
+    py.test -m js
+
+
+Or, in the `bokehjs` subdirectory of the source checkout.
+
+.. code-block:: sh
+
     gulp test
 
-in the `bokehjs` subdirectory of the source checkout.
 
 You can run all available tests (python and JS unit tests and example tests)
 from the top level directory by executing:
