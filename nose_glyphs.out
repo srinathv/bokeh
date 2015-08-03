@@ -1,0 +1,98 @@
+bokeh.models.tests.test_glyphs.test_AnnularWedge(<bokeh.models.glyphs.AnnularWedge object at 0x7f288991de48>,) ... ok
+bokeh.models.tests.test_glyphs.test_AnnularWedge(<bokeh.models.glyphs.AnnularWedge object at 0x7f288991de48>,) ... ok
+bokeh.models.tests.test_glyphs.test_AnnularWedge(<bokeh.models.glyphs.AnnularWedge object at 0x7f288991de48>, ['x', 'y', 'inner_radius', 'inner_radius_units', 'outer_radius', 'outer_radius_units', 'start_angle', 'start_angle_units', 'end_angle', 'end_angle_units', 'direction'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Annulus(<bokeh.models.glyphs.Annulus object at 0x7f288991d320>,) ... ok
+bokeh.models.tests.test_glyphs.test_Annulus(<bokeh.models.glyphs.Annulus object at 0x7f288991d320>,) ... ok
+bokeh.models.tests.test_glyphs.test_Annulus(<bokeh.models.glyphs.Annulus object at 0x7f288991d320>, ['x', 'y', 'inner_radius', 'inner_radius_units', 'outer_radius', 'outer_radius_units'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Arc(<bokeh.models.glyphs.Arc object at 0x7f288991d780>,) ... ok
+bokeh.models.tests.test_glyphs.test_Arc(<bokeh.models.glyphs.Arc object at 0x7f288991d780>, ['x', 'y', 'radius', 'radius_units', 'start_angle', 'start_angle_units', 'end_angle', 'end_angle_units', 'direction'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Bezier(<bokeh.models.glyphs.Bezier object at 0x7f288991d4e0>,) ... ok
+bokeh.models.tests.test_glyphs.test_Bezier(<bokeh.models.glyphs.Bezier object at 0x7f288991d4e0>, ['x0', 'y0', 'x1', 'y1', 'cx0', 'cy0', 'cx1', 'cy1'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Gear(<bokeh.models.glyphs.Gear object at 0x7f288991d9b0>,) ... ok
+bokeh.models.tests.test_glyphs.test_Gear(<bokeh.models.glyphs.Gear object at 0x7f288991d9b0>,) ... ok
+bokeh.models.tests.test_glyphs.test_Gear(<bokeh.models.glyphs.Gear object at 0x7f288991d9b0>, ['x', 'y', 'angle', 'module', 'module_units', 'teeth', 'pressure_angle', 'shaft_size', 'internal'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Image(<bokeh.models.glyphs.Image object at 0x7f288991d940>, ['image', 'x', 'y', 'dw', 'dw_units', 'dh', 'dh_units', 'dilate', 'color_mapper']) ... ok
+bokeh.models.tests.test_glyphs.test_ImageRGBA(<bokeh.models.glyphs.ImageRGBA object at 0x7f288991dd30>, ['image', 'x', 'y', 'dw', 'dw_units', 'dh', 'dh_units', 'rows', 'cols', 'dilate']) ... ok
+bokeh.models.tests.test_glyphs.test_ImageURL(<bokeh.models.glyphs.ImageURL object at 0x7f288991d7b8>, ['url', 'x', 'y', 'w', 'w_units', 'h', 'h_units', 'angle', 'angle_units', 'dilate', 'anchor']) ... ok
+bokeh.models.tests.test_glyphs.test_Line(<bokeh.models.glyphs.Line object at 0x7f288991d588>,) ... ok
+bokeh.models.tests.test_glyphs.test_Line(<bokeh.models.glyphs.Line object at 0x7f288991d588>, ['x', 'y'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_MultiLine(<bokeh.models.glyphs.MultiLine object at 0x7f288991d358>,) ... ok
+bokeh.models.tests.test_glyphs.test_MultiLine(<bokeh.models.glyphs.MultiLine object at 0x7f288991d358>, ['xs', 'ys'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Oval(<bokeh.models.glyphs.Oval object at 0x7f288991d080>,) ... ok
+bokeh.models.tests.test_glyphs.test_Oval(<bokeh.models.glyphs.Oval object at 0x7f288991d080>,) ... ok
+bokeh.models.tests.test_glyphs.test_Oval(<bokeh.models.glyphs.Oval object at 0x7f288991d080>, ['x', 'y', 'width', 'width_units', 'height', 'height_units', 'angle', 'angle_units'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Patch(<bokeh.models.glyphs.Patch object at 0x7f288991dbe0>,) ... ok
+bokeh.models.tests.test_glyphs.test_Patch(<bokeh.models.glyphs.Patch object at 0x7f288991dbe0>,) ... ok
+bokeh.models.tests.test_glyphs.test_Patch(<bokeh.models.glyphs.Patch object at 0x7f288991dbe0>, ['x', 'y'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Patches(<bokeh.models.glyphs.Patches object at 0x7f288991da20>,) ... ok
+bokeh.models.tests.test_glyphs.test_Patches(<bokeh.models.glyphs.Patches object at 0x7f288991da20>,) ... ok
+bokeh.models.tests.test_glyphs.test_Patches(<bokeh.models.glyphs.Patches object at 0x7f288991da20>, ['xs', 'ys'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Quad(<bokeh.models.glyphs.Quad object at 0x7f288991ddd8>,) ... ok
+bokeh.models.tests.test_glyphs.test_Quad(<bokeh.models.glyphs.Quad object at 0x7f288991ddd8>,) ... ok
+bokeh.models.tests.test_glyphs.test_Quad(<bokeh.models.glyphs.Quad object at 0x7f288991ddd8>, ['left', 'right', 'bottom', 'top'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Quadratic(<bokeh.models.glyphs.Quadratic object at 0x7f288991dda0>,) ... ok
+bokeh.models.tests.test_glyphs.test_Quadratic(<bokeh.models.glyphs.Quadratic object at 0x7f288991dda0>, ['x0', 'y0', 'x1', 'y1', 'cx', 'cy'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Ray(<bokeh.models.glyphs.Ray object at 0x7f288991d748>,) ... ok
+bokeh.models.tests.test_glyphs.test_Ray(<bokeh.models.glyphs.Ray object at 0x7f288991d748>, ['x', 'y', 'angle', 'angle_units', 'length', 'length_units'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Rect(<bokeh.models.glyphs.Rect object at 0x7f2889928b38>,) ... ok
+bokeh.models.tests.test_glyphs.test_Rect(<bokeh.models.glyphs.Rect object at 0x7f2889928b38>,) ... ok
+bokeh.models.tests.test_glyphs.test_Rect(<bokeh.models.glyphs.Rect object at 0x7f2889928b38>, ['x', 'y', 'width', 'width_units', 'height', 'height_units', 'angle', 'angle_units', 'dilate'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Segment(<bokeh.models.glyphs.Segment object at 0x7f2889928cf8>,) ... ok
+bokeh.models.tests.test_glyphs.test_Segment(<bokeh.models.glyphs.Segment object at 0x7f2889928cf8>, ['x0', 'y0', 'x1', 'y1'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Text(<bokeh.models.glyphs.Text object at 0x7f28d6a9be48>,) ... ok
+bokeh.models.tests.test_glyphs.test_Text(<bokeh.models.glyphs.Text object at 0x7f28d6a9be48>, ['x', 'y', 'text', 'angle', 'angle_units', 'x_offset', 'y_offset'], ['text_font', 'text_font_size', 'text_font_style', 'text_color', 'text_alpha', 'text_align', 'text_baseline']) ... ok
+bokeh.models.tests.test_glyphs.test_Wedge(<bokeh.models.glyphs.Wedge object at 0x7f288991dc18>,) ... ok
+bokeh.models.tests.test_glyphs.test_Wedge(<bokeh.models.glyphs.Wedge object at 0x7f288991dc18>,) ... ok
+bokeh.models.tests.test_glyphs.test_Wedge(<bokeh.models.glyphs.Wedge object at 0x7f288991dc18>, ['x', 'y', 'radius', 'radius_units', 'start_angle', 'start_angle_units', 'end_angle', 'end_angle_units', 'direction'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Asterisk(<bokeh.models.markers.Asterisk object at 0x7f288991d860>,) ... ok
+bokeh.models.tests.test_glyphs.test_Asterisk(<bokeh.models.markers.Asterisk object at 0x7f288991d860>,) ... ok
+bokeh.models.tests.test_glyphs.test_Asterisk(<bokeh.models.markers.Asterisk object at 0x7f288991d860>,) ... ok
+bokeh.models.tests.test_glyphs.test_Asterisk(<bokeh.models.markers.Asterisk object at 0x7f288991d860>, ['x', 'y', 'size', 'angle'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Circle(<bokeh.models.markers.Circle object at 0x7f2889928a58>,) ... ok
+bokeh.models.tests.test_glyphs.test_Circle(<bokeh.models.markers.Circle object at 0x7f2889928a58>,) ... ok
+bokeh.models.tests.test_glyphs.test_Circle(<bokeh.models.markers.Circle object at 0x7f2889928a58>,) ... ok
+bokeh.models.tests.test_glyphs.test_Circle(<bokeh.models.markers.Circle object at 0x7f2889928a58>, ['radius', 'radius_units', 'radius_dimension'], ['x', 'y', 'size', 'angle'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_CircleCross(<bokeh.models.markers.CircleCross object at 0x7f2889928a90>,) ... ok
+bokeh.models.tests.test_glyphs.test_CircleCross(<bokeh.models.markers.CircleCross object at 0x7f2889928a90>,) ... ok
+bokeh.models.tests.test_glyphs.test_CircleCross(<bokeh.models.markers.CircleCross object at 0x7f2889928a90>,) ... ok
+bokeh.models.tests.test_glyphs.test_CircleCross(<bokeh.models.markers.CircleCross object at 0x7f2889928a90>, ['x', 'y', 'size', 'angle'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_CircleX(<bokeh.models.markers.CircleX object at 0x7f288991d7f0>,) ... ok
+bokeh.models.tests.test_glyphs.test_CircleX(<bokeh.models.markers.CircleX object at 0x7f288991d7f0>,) ... ok
+bokeh.models.tests.test_glyphs.test_CircleX(<bokeh.models.markers.CircleX object at 0x7f288991d7f0>,) ... ok
+bokeh.models.tests.test_glyphs.test_CircleX(<bokeh.models.markers.CircleX object at 0x7f288991d7f0>, ['x', 'y', 'size', 'angle'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Cross(<bokeh.models.markers.Cross object at 0x7f2889928400>,) ... ok
+bokeh.models.tests.test_glyphs.test_Cross(<bokeh.models.markers.Cross object at 0x7f2889928400>,) ... ok
+bokeh.models.tests.test_glyphs.test_Cross(<bokeh.models.markers.Cross object at 0x7f2889928400>,) ... ok
+bokeh.models.tests.test_glyphs.test_Cross(<bokeh.models.markers.Cross object at 0x7f2889928400>, ['x', 'y', 'size', 'angle'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Diamond(<bokeh.models.markers.Diamond object at 0x7f2889928748>,) ... ok
+bokeh.models.tests.test_glyphs.test_Diamond(<bokeh.models.markers.Diamond object at 0x7f2889928748>,) ... ok
+bokeh.models.tests.test_glyphs.test_Diamond(<bokeh.models.markers.Diamond object at 0x7f2889928748>,) ... ok
+bokeh.models.tests.test_glyphs.test_Diamond(<bokeh.models.markers.Diamond object at 0x7f2889928748>, ['x', 'y', 'size', 'angle'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_DiamondCross(<bokeh.models.markers.DiamondCross object at 0x7f2889928630>,) ... ok
+bokeh.models.tests.test_glyphs.test_DiamondCross(<bokeh.models.markers.DiamondCross object at 0x7f2889928630>,) ... ok
+bokeh.models.tests.test_glyphs.test_DiamondCross(<bokeh.models.markers.DiamondCross object at 0x7f2889928630>,) ... ok
+bokeh.models.tests.test_glyphs.test_DiamondCross(<bokeh.models.markers.DiamondCross object at 0x7f2889928630>, ['x', 'y', 'size', 'angle'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_InvertedTriangle(<bokeh.models.markers.InvertedTriangle object at 0x7f28899289e8>,) ... ok
+bokeh.models.tests.test_glyphs.test_InvertedTriangle(<bokeh.models.markers.InvertedTriangle object at 0x7f28899289e8>,) ... ok
+bokeh.models.tests.test_glyphs.test_InvertedTriangle(<bokeh.models.markers.InvertedTriangle object at 0x7f28899289e8>,) ... ok
+bokeh.models.tests.test_glyphs.test_InvertedTriangle(<bokeh.models.markers.InvertedTriangle object at 0x7f28899289e8>, ['x', 'y', 'size', 'angle'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Square(<bokeh.models.markers.Square object at 0x7f2889928550>,) ... ok
+bokeh.models.tests.test_glyphs.test_Square(<bokeh.models.markers.Square object at 0x7f2889928550>,) ... ok
+bokeh.models.tests.test_glyphs.test_Square(<bokeh.models.markers.Square object at 0x7f2889928550>,) ... ok
+bokeh.models.tests.test_glyphs.test_Square(<bokeh.models.markers.Square object at 0x7f2889928550>, ['x', 'y', 'size', 'angle'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_SquareCross(<bokeh.models.markers.SquareCross object at 0x7f28899280f0>,) ... ok
+bokeh.models.tests.test_glyphs.test_SquareCross(<bokeh.models.markers.SquareCross object at 0x7f28899280f0>,) ... ok
+bokeh.models.tests.test_glyphs.test_SquareCross(<bokeh.models.markers.SquareCross object at 0x7f28899280f0>,) ... ok
+bokeh.models.tests.test_glyphs.test_SquareCross(<bokeh.models.markers.SquareCross object at 0x7f28899280f0>, ['x', 'y', 'size', 'angle'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_SquareX(<bokeh.models.markers.SquareX object at 0x7f2889928208>,) ... ok
+bokeh.models.tests.test_glyphs.test_SquareX(<bokeh.models.markers.SquareX object at 0x7f2889928208>,) ... ok
+bokeh.models.tests.test_glyphs.test_SquareX(<bokeh.models.markers.SquareX object at 0x7f2889928208>,) ... ok
+bokeh.models.tests.test_glyphs.test_SquareX(<bokeh.models.markers.SquareX object at 0x7f2889928208>, ['x', 'y', 'size', 'angle'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_Triangle(<bokeh.models.markers.Triangle object at 0x7f2889928080>,) ... ok
+bokeh.models.tests.test_glyphs.test_Triangle(<bokeh.models.markers.Triangle object at 0x7f2889928080>,) ... ok
+bokeh.models.tests.test_glyphs.test_Triangle(<bokeh.models.markers.Triangle object at 0x7f2889928080>,) ... ok
+bokeh.models.tests.test_glyphs.test_Triangle(<bokeh.models.markers.Triangle object at 0x7f2889928080>, ['x', 'y', 'size', 'angle'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
+bokeh.models.tests.test_glyphs.test_X(<bokeh.models.markers.X object at 0x7f2889928710>,) ... ok
+bokeh.models.tests.test_glyphs.test_X(<bokeh.models.markers.X object at 0x7f2889928710>,) ... ok
+bokeh.models.tests.test_glyphs.test_X(<bokeh.models.markers.X object at 0x7f2889928710>,) ... ok
+bokeh.models.tests.test_glyphs.test_X(<bokeh.models.markers.X object at 0x7f2889928710>, ['x', 'y', 'size', 'angle'], ['fill_color', 'fill_alpha'], ['line_color', 'line_width', 'line_alpha', 'line_join', 'line_cap', 'line_dash', 'line_dash_offset']) ... ok
