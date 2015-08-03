@@ -36,18 +36,3 @@ def print_versions():
     """ % (__version__, pt.python_version(),
            pt.python_implementation(), pt.platform())
     print(message)
-
-def runtests():
-    """
-    Adds additional directories to the path which allows tests to run correctly.
-    """
-
-    import os
-
-    # Add all 'tests' subdirectories to the options
-    rootdir = os.path.join(os.path.dirname(__file__), "..")
-    for root, dirs, files in os.walk(rootdir):
-        if 'tests' in dirs:
-            testsdir = os.path.join(root, 'tests')
-            argv.append(testsdir)
-            print('Test dir: %s' % testsdir[len(rootdir)+1:])
