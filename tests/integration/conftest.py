@@ -19,9 +19,9 @@ def server(request):
 
 
 @pytest.fixture
-def bokeh_file_test(request, server):
+def output_file_url(request, server):
 
-    filename = 'bokeh_test.html'
+    filename = request.function.__name__ + '.html'
     file_path = request.fspath.dirpath().join(filename).strpath
 
     output_file(file_path)
